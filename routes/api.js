@@ -9,10 +9,22 @@ const codes = {
 
 router.route('/words')
   .post(function(req, res){
-
+    var word = new models.word(req.body);
+    word.save(function(error, word){
+      if (error) {
+				res.status('400').send({result : "fail", code : codes.fail, error:error});
+			} else {
+				res.send({result: "sucess", code : codes.success, word:word});		
+			}
+    });
   })
   .get(function(req, res){
-    res.render('index', { title: 'Words' });
+    models.word.find({},,function(error, words){
+			if(error){
+				res.status('400').send({result : "fail", code : codes.fail, error:error});
+			} else {
+				res.send({result: "sucess", code : codes.success, words:words});
+			}
   });
 
 router.route('/names')
