@@ -23,7 +23,8 @@ router.route('/words')
 			if(error){
 				res.status('400').send({result : "fail", code : codes.fail, error:error});
 			} else {
-				res.send({result: "sucess", code : codes.success, words:words});
+				res.send({result: "sucess", code : codes.success, models:models});
+        //res.send({result: "sucess", code : codes.success, words:words});
 			}
     })
   });
