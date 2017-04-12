@@ -3,8 +3,8 @@ var router = express.Router();
 var models = require('../modules/models')();
 
 const codes = {
-  success = 1,
-  fail = -1
+  success: 1,
+  fail: -1
 };
 
 router.route('/words')

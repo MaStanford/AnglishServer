@@ -8,7 +8,7 @@ var sessions = require('client-sessions');
 var crypto = require('crypto');
 var mongoose = require('mongoose');
 
-var models = require('../modules/models.js');
+var models = require('./modules/models.js');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
@@ -16,16 +16,17 @@ var words = require('./routes/words');
 
 var app = express();
 
+//Set port
 app.set('port', (process.env.PORT || 5000));
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
 
 //Listen to set port
 app.listen(app.get('port'), function() {
   console.log('Node app is running on port', app.get('port'));
 });
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
 
 //cookie
 app.use(sessions({
