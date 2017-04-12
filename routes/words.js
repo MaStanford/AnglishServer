@@ -12,7 +12,7 @@ router.route('/words')
 
   })
   .get(function(req, res){
-
+    res.render('index', { title: 'Words' });
   });
 
 router.route('/names')
@@ -20,7 +20,7 @@ router.route('/names')
 
 })
 .get(function(req, res){
-
+    res.render('index', { title: 'names' });
 });
 
 module.exports = router;
