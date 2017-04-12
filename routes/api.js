@@ -1,6 +1,7 @@
 var express = require('express');
 var router = express.Router();
 var models = require('../modules/models')();
+var utils = require('../modules/utils');
 
 const codes = {
   success: 1,
@@ -12,19 +13,18 @@ router.route('/words')
     var word = new models.word(req.body);
     word.save(function(error, word){
       if (error) {
-				res.status('400').send({result : "fail", code : codes.fail, error:error});
+				res.status('400').send({result : "fail", code : codes.fail, error:error, request:req.body});
 			} else {
 				res.send({result: "sucess", code : codes.success, word:word});		
 			}
     });
   })
   .get(function(req, res){
-    models.word.find({},function(error, words){
-			if(error){
+    models.word.find({word:req.query.word},function(error, words){
+			if(error || utils.isEmpty(words)){
 				res.status('400').send({result : "fail", code : codes.fail, error:error});
 			} else {
-				res.send({result: "sucess", code : codes.success, models:models});
-        //res.send({result: "sucess", code : codes.success, words:words});
+        res.send({result: "sucess", code : codes.success, words:words});
 			}
     })
   });
