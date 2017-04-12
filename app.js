@@ -12,13 +12,15 @@ var words = require('./routes/words');
 
 var app = express();
 
-//Mongoose
-//Set up MONGOLAB_URI 
-//https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri
-mongoose.connect(process.env.MONGOLAB_URI, function (error) {
-    if (error) console.error(error);
-    else console.log('mongo connected');
-});
+app.set('port', (process.env.PORT || 5000));
+
+// //Mongoose
+// //Set up MONGOLAB_URI 
+// //https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri
+// mongoose.connect(process.env.MONGOLAB_URI, function (error) {
+//     if (error) console.error(error);
+//     else console.log('mongo connected');
+// });
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -35,6 +37,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/', index);
 app.use('/users', users);
 app.use('/words', words);
+
+app.listen(app.get('port'), function() {
+  console.log('Node app is running on port', app.get('port'));
+});
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
