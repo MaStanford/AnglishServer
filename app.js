@@ -14,13 +14,13 @@ var app = express();
 
 app.set('port', (process.env.PORT || 5000));
 
-// //Mongoose
-// //Set up MONGOLAB_URI 
-// //https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri
-// mongoose.connect(process.env.MONGOLAB_URI, function (error) {
-//     if (error) console.error(error);
-//     else console.log('mongo connected');
-// });
+//Mongoose
+//Set up MONGOLAB_URI 
+//https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri
+mongoose.connect(process.env.MONGOLAB_URI, function (error) {
+    if (error) console.error(error);
+    else console.log('mongo connected');
+});
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
