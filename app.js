@@ -12,7 +12,7 @@ var models = require('./modules/models.js');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
-var words = require('./routes/words');
+var api = require('./routes/api');
 
 var app = express();
 
@@ -46,7 +46,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', index);
 app.use('/users', users);
-app.use('/words', words);
+app.use('/api', api);
 
 // error handlers
 
