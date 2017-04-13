@@ -45,6 +45,14 @@ module.exports = function (){
 			extra: String
 		});
 		context.name = mongoose.model('names', context.nameSchema);	
+
+		//Sessions
+		context.sessionSchema = mongoose.Schema({
+			user:{type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true, required: true, dropDups: true },
+			token:{type: String, unique: true, required: true, dropDups: true },
+			dateCreated: Date
+		});
+		context.session = mongoose.model('sessions', context.sessionSchema);
 	});
 		
 	//Return our module singleton
