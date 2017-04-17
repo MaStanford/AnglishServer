@@ -1,8 +1,6 @@
-var crypto = require('crypto');
-let keepAlive = 7 * 24 * 60 * 60 * 1000; //7 days.
-
-
 module.exports = function(){
+    var crypto = require('crypto');
+    const keepAlive = 7 * 24 * 60 * 60 * 1000; //7 days.
     var isEmpty = function(obj) {
         for(var prop in obj) {
             if(obj.hasOwnProperty(prop))
