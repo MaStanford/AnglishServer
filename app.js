@@ -5,7 +5,6 @@ var logger = require('morgan');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var sessions = require('client-sessions');
-var crypto = require('crypto');
 var mongoose = require('mongoose');
 
 var models = require('./modules/models.js');
@@ -27,14 +26,6 @@ app.listen(app.get('port'), function() {
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
-
-//cookie
-app.use(sessions({
-  cookieName: 'cookie', // cookie name dictates the key name added to the request object
-  secret: 'blargadeeblargblarg', // should be a large unguessable string
-  duration: 24 * 60 * 60 * 1000, // how long the session will stay valid in ms
-  activeDuration: 1000 * 60 * 30 // if expiresIn < activeDuration, the session will be extended by activeDuration milliseconds
-}));
 
 // uncomment after placing your favicon in /public
 //app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));

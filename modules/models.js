@@ -9,6 +9,7 @@ module.exports = function (){
 	
 	context = {};
 	var mongoose = require('mongoose');
+	mongoose.Promise = global.Promise;
 	
 	//Mongoose
 	//Set up MONGOLAB_URI 
@@ -24,7 +25,7 @@ module.exports = function (){
 		context.userSchema = mongoose.Schema({
 			email: {type: String, unique: true, required: true, dropDups: true },
 			password: String,
-			permissions: Number
+			permissions: { type: Number, default: 0 }
 		});
 		context.user = mongoose.model('users', context.userSchema);
 
@@ -48,9 +49,9 @@ module.exports = function (){
 
 		//Sessions
 		context.sessionSchema = mongoose.Schema({
-			user:{type: mongoose.Schema.Types.ObjectId, ref: 'User', unique: true, required: true, dropDups: true },
+			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users', unique: true, required: true, dropDups: true },
 			token:{type: String, unique: true, required: true, dropDups: true },
-			dateCreated: Date
+			dateCreated: { type: Date, default: Date.now }
 		});
 		context.session = mongoose.model('sessions', context.sessionSchema);
 	});
