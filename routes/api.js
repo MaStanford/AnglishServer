@@ -41,8 +41,6 @@ router.route('/words')
         res.status('400').send(templates.response(codes.fail, "fail", error.message, req.body));
     });
   })
-
-
   .get(function(req, res){
     models.word.find({word:req.query.word},function(error, words){
       if(error || utils.isEmpty(words)){
