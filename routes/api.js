@@ -1,8 +1,8 @@
 var express = require('express');
 var router = express.Router();
 var models = require('../modules/models')();
-var utils = require('../modules/utils');
 var templates = require('../modules/templates');
+var utils = require('../modules/utils');
 
 const codes = {
   success: 1,
@@ -60,6 +60,24 @@ router.route('/names')
   })
   .get(function(req, res){
       res.render('index', { title: 'names' });
+  });
+
+router.route('/bulkWord')
+  .post(function(req, res){
+    var token = req.query.bulk_token;
+    if(!token){
+        res.status('400').send(templates.response(codes.fail, "fail", 'Invalid token', req.body));
+    }
+    if(token == process.env.BULK_TOKEN){
+        var word = new models.word(req.body);
+        word.save(function(error, word){
+          if(error){
+            res.status('400').send(templates.response(codes.fail, "fail", error, req.body));
+          }else{
+            res.send(templates.response(codes.success, "success", word, req.body));		
+          }
+        }); 
+    }
   });
 
 module.exports = router;
