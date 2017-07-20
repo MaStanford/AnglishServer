@@ -12,7 +12,8 @@ const codes = {
   duplicate_username : -4
 };
 
-router.route('/login').post(function(req, res){
+router.route('/login')
+.post(function(req, res){
 	models.user.findOne({email: req.body.email}, function(error, userFound){
 		if(error){
 			//Send error
