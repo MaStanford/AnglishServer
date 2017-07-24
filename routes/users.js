@@ -17,7 +17,7 @@ router.route('/login')
 	models.user.findOne({email: req.body.email}, function(error, userFound){
 		if(error){
 			//Send error
-			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user", {}));
+			res.send(templates.response(codes.fail, "fail", "Error retrieving user", {}));
 		}else{
 			if(userFound){
 				var hash = utils.createHash(req.body.password);
@@ -30,18 +30,18 @@ router.route('/login')
 					var sessionModel = models.session({user:userFound._id, token:sesstoken});
 					sessionModel.save(function(error, session){
 						if(error){
-							res.status('400').send(templates.response(codes.fail, "fail", "Error creating session token"));
+							res.status('500').send(templates.response(codes.fail, "fail", "Error creating session token"));
 						}else{
 							res.send(templates.response(codes.success, "success", session));		
 						}
 					});
 				}else{
 					//Bad password
-					res.status('400').send(templates.response(codes.bad_password, "fail", "Password incorrect."));
+					res.send(templates.response(codes.bad_password, "fail", "Password incorrect."));
 				}
 			}else{
 				//No User found
-				res.status('400').send(templates.response(codes.no_user_found, "fail", "User not found."));
+				res.send(templates.response(codes.no_user_found, "fail", "User not found."));
 			}
 		}
 	});
