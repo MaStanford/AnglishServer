@@ -84,10 +84,15 @@ router.route('/user').get(function (req, res){
 	models.user.findOne({email: username}, function (error, userFound){
 		if(error){
 			//Send error
-			res.status('400').send(templates.response(codes.no_user_found, "fail", "Error retrieving user"));
+			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user"));
 		} else {
-		//Send Success.
-			res.send(templates.response(codes.success, "success", userFound));		
+			if(userFound){
+				//Send Success.
+				res.send(templates.response(codes.success, "success", userFound));	
+			}else{
+				//Send error
+				res.status('400').send(templates.response(codes.no_user_found, "fail", "Error retrieving user"));
+			}	
 		}
 	});
 });
