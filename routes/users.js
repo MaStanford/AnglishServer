@@ -34,7 +34,7 @@ router.route('/login')
 						if(error){
 							res.status('400').send(templates.response(codes.fail, "fail", "Error creating session token"));
 						}else{
-							res.send(templates.response(codes.success, "success", {session:session, user:userFound}));		
+							res.send(templates.response(codes.success, "success", session));		
 						}
 					});
 				}else{
@@ -56,7 +56,7 @@ router.route('/logout').post(function(req, res){
 			res.status('400').send(templates.response(codes.fail, "fail", "Error logging out user."));
 		}else{
 			//Send Success.
-			res.send(templates.response(codes.success, "success", words));		
+			res.send(templates.response(codes.success, "success", {}));		
 		}
 	});
 });
@@ -77,6 +77,19 @@ router.route('/register').post(function(req, res){
 		}else{
 			//send success.
 			res.send(templates.response(codes.success, "success", user));		
+		}
+	});
+});
+
+router.route('/user').get(function (req, res){
+	var username = req.query.user;
+	models.user.findOne({email: username}, function (req, res){
+		if(error){
+			//Send error
+			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user", {}));
+		} else {
+		//Send Success.
+			res.send(templates.response(codes.success, "success", {}));		
 		}
 	});
 });
