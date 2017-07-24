@@ -23,9 +23,7 @@ router.route('/login')
 				var hash = utils.createHash(req.body.password);
 				if(hash == userFound.password){
 					//Check if we already have a token and update it.
-					models.session.remove({user: userFound._id}, function(error, sessionToken){
-						//Don't really care.
-					});
+					models.session.remove({user: userFound._id}, function(error, sessionToken){});
 
 					//create session token.
 					var sesstoken = utils.createToken();
@@ -83,13 +81,13 @@ router.route('/register').post(function(req, res){
 
 router.route('/user').get(function (req, res){
 	var username = req.query.user;
-	models.user.findOne({email: username}, function (req, res){
+	models.user.findOne({email: username}, function (error, userFound){
 		if(error){
 			//Send error
-			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user", {}));
+			res.status('400').send(templates.response(codes.no_user_found, "fail", "Error retrieving user"));
 		} else {
 		//Send Success.
-			res.send(templates.response(codes.success, "success", {}));		
+			res.send(templates.response(codes.success, "success", userFound));		
 		}
 	});
 });
