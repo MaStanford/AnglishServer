@@ -52,6 +52,7 @@ router.route('/login')
 					};
 				}
 			}).catch(function (err) {
+				console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
 				res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
 			});
 	});
@@ -111,11 +112,13 @@ router.route('/user')
 						email: userFound.email,
 						permissions: userFound.permissions
 					};
+					console.log(templates.response(codes.success, "success", user));
 					//Send Success.
 					res.send(templates.response(codes.success, "success", user));
 				} else {
+					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
 					//Send error
-					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", {}));
+					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'Undefined error, this probably just means the server is fucked.'));
 				}
 			}
 		});
