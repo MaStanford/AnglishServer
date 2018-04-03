@@ -55,6 +55,14 @@ module.exports = function (){
 			dateCreated: { type: Date, default: Date.now }
 		});
 		context.session = mongoose.model('sessions', context.sessionSchema);
+
+		//Comments
+		context.commentSchema = mongoose.Schema({
+			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users'},
+			word:{type: mongoose.Schema.Types.ObjectId, ref: 'words'},
+			comment:{type: String, required: true}
+		});
+		context.comment = mongoose.model('comments', context.commentSchema);
 	});
 		
 	//Return our module singleton
