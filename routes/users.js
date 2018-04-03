@@ -15,7 +15,7 @@ const codes = {
 
 router.route('/login')
 	.post(function (req, res) {
-		models.user.findOne({ email: eq.body.email }).exec()
+		models.user.findOne({ email: req.body.email }).exec()
 			.then(function (user) {
 				if (user) {
 					var hash = utils.createHash(req.body.password);
@@ -43,6 +43,7 @@ router.route('/login')
 				return sessionModel.save();
 			}).then(function (sessionToken) {
 				if (sessionToken) {
+					console.log(templates.response(codes.success, "success", sessionToken));
 					res.send(templates.response(codes.success, "success", sessionToken));
 				} else {
 					throw new {
@@ -61,6 +62,7 @@ router.route('/logout').post(function (req, res) {
 	models.session.remove({ token: req.body.token }, function (error) {
 		if (error) {
 			//Send Error.
+			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
 			res.status('400').send(templates.response(codes.fail, "fail", "Error logging out user."));
 		} else {
 			//Send Success.
@@ -81,9 +83,11 @@ router.route('/register').post(function (req, res) {
 				message = "Email or Handle already registered";
 				code = codes.duplicate_username;
 			}
+			console.log(templates.response(code, message, error));
 			res.status('400').send(templates.response(code, message, error));
 		} else {
 			//send success.
+			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
 			res.send(templates.response(codes.success, "success", user));
 		}
 	});
@@ -112,13 +116,13 @@ router.route('/user')
 						email: userFound.email,
 						permissions: userFound.permissions
 					};
-					console.log(templates.response(codes.success, "success", user));
 					//Send Success.
+					console.log(templates.response(codes.success, "success", user));
 					res.send(templates.response(codes.success, "success", user));
 				} else {
-					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
 					//Send error
-					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'Undefined error, this probably just means the server is fucked.'));
+					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 				}
 			}
 		});
@@ -166,9 +170,11 @@ router.route('/user')
 				email: savedUser.email,
 				permissions: savedUser.permissions
 			};
+			console.log(templates.response(codes.success, "success", user));
 			res.send(templates.response(codes.success, "success", user));
 		})
 		.catch(function (err) {
+			console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
 			res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
 		});
 	});
