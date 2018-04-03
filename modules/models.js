@@ -14,7 +14,7 @@ module.exports = function (){
 	//Mongoose
 	//Set up MONGOLAB_URI 
 	//https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri	
-	mongoose.connect(process.env.MONGODB_URI);
+	mongoose.connect(process.env.MONGODB_URI || '127.0.0.1:27017');
 	console.log('db connecting');
 
 	var db = mongoose.connection;
@@ -23,8 +23,9 @@ module.exports = function (){
 
 		//Users scheme
 		context.userSchema = mongoose.Schema({
+			handle: {type: String, unique: true, required: true, dropDups: true },
 			email: {type: String, unique: true, required: true, dropDups: true },
-			password: String,
+			password: {type: String, required: true},
 			permissions: { type: Number, default: 0 }
 		});
 		context.user = mongoose.model('users', context.userSchema);

@@ -65,10 +65,10 @@ router.route('/register').post(function(req, res){
 	user.save(function(error, user){
 		if(error){
 			//send error.
-			var message = "";
+			var message = JSON.stringify(error);
 			var code = codes.fail;
 			if(error.code == 11000){
-				message = "Email already registered";
+				message = "Email or Handle already registered";
 				code = codes.duplicate_username;
 			}
 			res.status('400').send(templates.response(code, "fail", message));
@@ -87,8 +87,14 @@ router.route('/user').get(function (req, res){
 			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user"));
 		} else {
 			if(userFound){
+				//Make new object without password object
+				var user = {
+					handle: userFound.handle,
+					email:userFound.email,
+					permissions:userFound.permissions
+				};
 				//Send Success.
-				res.send(templates.response(codes.success, "success", userFound));	
+				res.send(templates.response(codes.success, "success", user));	
 			}else{
 				//Send error
 				res.status('400').send(templates.response(codes.no_user_found, "fail", "Error retrieving user"));
