@@ -23,8 +23,9 @@ module.exports = function (){
 
 		//Users scheme
 		context.userSchema = mongoose.Schema({
+			handle: {type: String, unique: true, required: true, dropDups: true },
 			email: {type: String, unique: true, required: true, dropDups: true },
-			password: String,
+			password: {type: String, required: true},
 			permissions: { type: Number, default: 0 }
 		});
 		context.user = mongoose.model('users', context.userSchema);
