@@ -65,13 +65,13 @@ router.route('/register').post(function(req, res){
 	user.save(function(error, user){
 		if(error){
 			//send error.
-			var message = JSON.stringify(error);
+			var message = '';
 			var code = codes.fail;
 			if(error.code == 11000){
 				message = "Email or Handle already registered";
 				code = codes.duplicate_username;
 			}
-			res.status('400').send(templates.response(code, "fail", message));
+			res.status('400').send(templates.response(code, message, error));
 		}else{
 			//send success.
 			res.send(templates.response(codes.success, "success", user));		
@@ -84,7 +84,7 @@ router.route('/user').get(function (req, res){
 	models.user.findOne({email: username}, function (error, userFound){
 		if(error){
 			//Send error
-			res.status('400').send(templates.response(codes.fail, "fail", "Error retrieving user"));
+			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
 		} else {
 			if(userFound){
 				//Make new object without password object
@@ -97,7 +97,7 @@ router.route('/user').get(function (req, res){
 				res.send(templates.response(codes.success, "success", user));	
 			}else{
 				//Send error
-				res.status('400').send(templates.response(codes.no_user_found, "fail", "Error retrieving user"));
+				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", {}));
 			}	
 		}
 	});
