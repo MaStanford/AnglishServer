@@ -23,18 +23,10 @@ router.route('/login')
 						//Check if we already have a token and update it.
 						return models.session.remove({ user: userFound._id }).exec();
 					} else {
-						throw new {
-							code: codes.bad_password,
-							data: "Incorrect Password",
-							object: 'Password did not match saved password'
-						};
+						throw new Error('Invalid password');
 					}
 				} else {
-					throw new {
-						code: codes.no_user_found,
-						data: "User not found",
-						object: 'Error finding user'
-					};
+					throw new Error('User not found');
 				}
 			}).then(function (result) {
 				//create session token.
@@ -46,15 +38,11 @@ router.route('/login')
 					console.log(templates.response(codes.success, "success", sessionToken));
 					res.send(templates.response(codes.success, "success", sessionToken));
 				} else {
-					throw new {
-						code: codes.fail,
-						data: "Session fail",
-						object: 'Error creating session tokenr'
-					};
+					throw new Error('Error creating session token');
 				}
 			}).catch(function (err) {
-				console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
-				res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
+				console.log(templates.response(codes.bad_password, err.message || 'Failed to login', err.message));
+				res.send(templates.response(codes.bad_password, err.message || 'Failed to login', err.message));
 			});
 	});
 
