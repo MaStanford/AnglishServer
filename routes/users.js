@@ -16,23 +16,21 @@ const codes = {
 router.route('/login')
 	.post(function (req, res) {
 		models.user.findOne({ email: req.body.email }).exec()
-			.then(function (user) {
+			.then(function (userFound) {
 				if (user) {
 					var hash = utils.createHash(req.body.password);
 					if (hash == userFound.password) {
-						//Check if we already have a token and update it.
-						return models.session.remove({ user: userFound._id }).exec();
+						//It's easier to just remove the previous token and make a new one, than to find and update or find and create
+						models.session.remove({ user: userFound._id }, function () { });
+						var sesstoken = utils.createToken();
+						var sessionModel = models.session({ user: userFound._id, token: sesstoken });
+						return sessionModel.save();
 					} else {
 						throw new Error('Invalid password');
 					}
 				} else {
 					throw new Error('User not found');
 				}
-			}).then(function (result) {
-				//create session token.
-				var sesstoken = utils.createToken();
-				var sessionModel = models.session({ user: userFound._id, token: sesstoken });
-				return sessionModel.save();
 			}).then(function (sessionToken) {
 				if (sessionToken) {
 					console.log(templates.response(codes.success, "success", sessionToken));
@@ -92,7 +90,7 @@ router.route('/register').post(function (req, res) {
 router.route('/user')
 	.get(function (req, res) {
 		var user = req.query.user;
-		models.user.findOne({ email: user}, function (error, userFound) {
+		models.user.findOne({ email: user }, function (error, userFound) {
 			if (error) {
 				//Send error
 				res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
@@ -120,51 +118,51 @@ router.route('/user')
 		var userEmail = req.query.email;
 		var updaterSessionToken = req.query.sessionToken;
 		//We need to find a session token so we can get a user ID/
-		models.session.findOne({token: updaterSessionToken}).exec()
-		.then(function(sessionToken){
-			if(sessionToken){
-				//We have a session token so we look up the user. 
-				return models.user.findOne({_id:  sessionToken.user});
-			}else{
-				throw new templates.error(codes.no_user_found, "Invalid user", "Invalid user attempting to update users.");
-			}
-		})
-		.then(function(foundUser){
-			//We check to make sure the user has mod permissions and has higher permissions than the user they are attempting to update
-			if(foundUseruser && foundUser.permissions >= 5 && foundUser.permissions > user.permissions){
-				//If we have prereqs, then we find the user to update.
-				return models.user.findOne({email: userEmail}).exec();
-			}else{
-				throw new templates.error(codes.invalid_permissions, "Invalid permissions", "Invalid permissions to update users");
-			}
-		})
-		.then(function(foundUser){
-			if(foundUser){
-				//We found the user to update
-				foundUser.email = user.email || foundUser.email;
-				foundUser.handle = user.handle || foundUser.handle;
-				foundUser.permissions = user.permissions || foundUser.permissions;
-				if(user.password){
-					foundUser.password = utils.createHash(user.password);
+		models.session.findOne({ token: updaterSessionToken }).exec()
+			.then(function (sessionToken) {
+				if (sessionToken) {
+					//We have a session token so we look up the user. 
+					return models.user.findOne({ _id: sessionToken.user });
+				} else {
+					throw new templates.error(codes.no_user_found, "Invalid user", "Invalid user attempting to update users.");
 				}
-				return foundUser.save();
-			}else{
-				throw new templates.error(codes.no_user_found, "User not found", "Could not find user to update");
-			}
-		})
-		.then(function(savedUser){
-			var user = {
-				handle: savedUser.handle,
-				email: savedUser.email,
-				permissions: savedUser.permissions
-			};
-			console.log(templates.response(codes.success, "success", user));
-			res.send(templates.response(codes.success, "success", user));
-		})
-		.catch(function (err) {
-			console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
-			res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
-		});
+			})
+			.then(function (foundUser) {
+				//We check to make sure the user has mod permissions and has higher permissions than the user they are attempting to update
+				if (foundUseruser && foundUser.permissions >= 5 && foundUser.permissions > user.permissions) {
+					//If we have prereqs, then we find the user to update.
+					return models.user.findOne({ email: userEmail }).exec();
+				} else {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissions", "Invalid permissions to update users");
+				}
+			})
+			.then(function (foundUser) {
+				if (foundUser) {
+					//We found the user to update
+					foundUser.email = user.email || foundUser.email;
+					foundUser.handle = user.handle || foundUser.handle;
+					foundUser.permissions = user.permissions || foundUser.permissions;
+					if (user.password) {
+						foundUser.password = utils.createHash(user.password);
+					}
+					return foundUser.save();
+				} else {
+					throw new templates.error(codes.no_user_found, "User not found", "Could not find user to update");
+				}
+			})
+			.then(function (savedUser) {
+				var user = {
+					handle: savedUser.handle,
+					email: savedUser.email,
+					permissions: savedUser.permissions
+				};
+				console.log(templates.response(codes.success, "success", user));
+				res.send(templates.response(codes.success, "success", user));
+			})
+			.catch(function (err) {
+				console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
+				res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
+			});
 	});
 
 module.exports = router;
