@@ -17,7 +17,7 @@ router.route('/login')
 	.post(function (req, res) {
 		models.user.findOne({ email: req.body.email }).exec()
 			.then(function (userFound) {
-				if (user) {
+				if (userFound) {
 					var hash = utils.createHash(req.body.password);
 					if (hash == userFound.password) {
 						//It's easier to just remove the previous token and make a new one, than to find and update or find and create
