@@ -8,6 +8,7 @@ var sessions = require('client-sessions');
 var mongoose = require('mongoose');
 
 var models = require('./modules/models.js');
+var session = require('./modules/session.js');
 
 var index = require('./routes/index');
 var users = require('./routes/users');
@@ -34,6 +35,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+//Handles the session token before anything else is done, it's passed in the req.session field.
+app.use(session.getSessionToken);
 
 app.use('/', index);
 app.use('/users', users);

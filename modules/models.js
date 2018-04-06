@@ -14,13 +14,12 @@ module.exports = function (){
 	//Mongoose
 	//Set up MONGOLAB_URI 
 	//https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri	
-	mongoose.connect(process.env.MONGODB_URI || '127.0.0.1:27017');
+	mongoose.connect(process.env.MONGODB_URI || '127.0.0.1:27017/anglish');
 	console.log('db connecting');
 
 	var db = mongoose.connection;
 	db.on('error', console.error.bind(console, 'connection error:'));
 	db.once('open', function() {
-
 		//Users scheme _ids are default to all objects
 		context.userSchema = mongoose.Schema({
 			handle: {type: String, unique: true, required: true, dropDups: true },
@@ -59,8 +58,8 @@ module.exports = function (){
 
 		//Comments
 		context.commentSchema = mongoose.Schema({
-			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users'},
-			word:{type: mongoose.Schema.Types.ObjectId, ref: 'words'},
+			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true},
+			word:{type: mongoose.Schema.Types.ObjectId, ref: 'words', required: true},
 			comment:{type: String, required: true}
 		});
 		context.comment = mongoose.model('comments', context.commentSchema);

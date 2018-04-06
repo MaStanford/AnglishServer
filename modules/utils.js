@@ -33,3 +33,7 @@ module.exports.isExpiredToken = function(token){
         return false;
     }
 };
+
+module.exports.caseInsensitive = function(search){
+    return new RegExp(search, 'i')
+}

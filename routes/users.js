@@ -3,49 +3,48 @@ var router = express.Router();
 var models = require('../modules/models')();
 var utils = require('../modules/utils');
 var templates = require('../modules/templates');
-
-const codes = {
-	success: 1,
-	fail: -1,
-	bad_password: -2,
-	no_user_found: -3,
-	duplicate_username: -4,
-	invalid_permissions: -5
-};
+var codes = templates.codes;
 
 router.route('/login')
 	.post(function (req, res) {
-		models.user.findOne({ email: req.body.email }).exec()
+		var loggingInUser = {};
+		var email = req.body.email;
+		models.user.findOne({ email: utils.caseInsensitive(email) }).exec()
 			.then(function (userFound) {
 				if (userFound) {
 					var hash = utils.createHash(req.body.password);
 					if (hash == userFound.password) {
-						//It's easier to just remove the previous token and make a new one, than to find and update or find and create
-						models.session.remove({ user: userFound._id }, function () { });
-						var sesstoken = utils.createToken();
-						var sessionModel = models.session({ user: userFound._id, token: sesstoken });
-						return sessionModel.save();
+						loggingInUser = userFound;
+						return models.session.findOne({ user: userFound._id }).exec();
 					} else {
-						throw new Error('Invalid password');
+						throw new templates.error(codes.bad_password, "Bad password", "Password does not match");
 					}
 				} else {
-					throw new Error('User not found');
+					throw new templates.error(codes.no_user_found, "User not found", "DB has no matching user: " + utils.caseInsensitive(email));
 				}
+			}).then(function (session) {
+				var sesstoken = utils.createToken();
+				if(session){
+					session.set({token:sesstoken});
+				}else{
+					session = models.session({ user: loggingInUser._id, token: sesstoken });
+				}
+				return session.save();
 			}).then(function (sessionToken) {
 				if (sessionToken) {
 					console.log(templates.response(codes.success, "success", sessionToken));
 					res.send(templates.response(codes.success, "success", sessionToken));
 				} else {
-					throw new Error('Error creating session token');
+					throw new templates.error(codes.fail, "Error creating token", "Unknown DB error");
 				}
 			}).catch(function (err) {
-				console.log(templates.response(codes.bad_password, err.message || 'Failed to login', err.message));
-				res.send(templates.response(codes.bad_password, err.message || 'Failed to login', err.message));
+				console.log(templates.response(err.error_code || codes.bad_password, err.message || 'Fail', err.error || 'Error logging in!'));
+				res.send(templates.response(err.error_code || codes.bad_password, err.message || 'Fail', err.error || 'Error logging in!'));
 			});
 	});
 
 router.route('/logout').post(function (req, res) {
-	models.session.remove({ token: req.header('sessionToken')}, function (error) {
+	models.session.remove({ token: req.header('sessionToken') }, function (error) {
 		if (error) {
 			//Send Error.
 			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
@@ -73,7 +72,7 @@ router.route('/register').post(function (req, res) {
 			res.status('400').send(templates.response(code, message, error));
 		} else {
 			//send success.
-			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
+			console.log(templates.response(codes.success, "success", user));
 			res.send(templates.response(codes.success, "success", user));
 		}
 	});
@@ -90,95 +89,64 @@ router.route('/register').post(function (req, res) {
 router.route('/user')
 	.get(function (req, res) {
 		var user_email = req.query.email;
-		var user_id
-		//Check if we have the email or id
-		if(user_email){
-			models.user.findOne({ email: user_email }, function (error, userFound) {
-				if (error) {
-					//Send error
-					res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+		models.user.findOne({ email: utils.caseInsensitive(user_email) }, function (error, userFound) {
+			if (error) {
+				//Send error
+				res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+			} else {
+				if (userFound) {
+					//Make new object without password object
+					var user = {
+						handle: userFound.handle,
+						email: userFound.email,
+						permissions: userFound.permissions
+					};
+					//Send Success.
+					console.log(templates.response(codes.success, "success", user));
+					res.send(templates.response(codes.success, "success", user));
 				} else {
-					if (userFound) {
-						//Make new object without password object
-						var user = {
-							handle: userFound.handle,
-							email: userFound.email,
-							permissions: userFound.permissions
-						};
-						//Send Success.
-						console.log(templates.response(codes.success, "success", user));
-						res.send(templates.response(codes.success, "success", user));
-					} else {
-						//Send error
-						console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
-						res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
-					}
-				}
-			});
-		}else{
-			models.user.findOne({_id: user_id}, function (error, userFound) {
-				if (error) {
 					//Send error
-					res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
-				} else {
-					if (userFound) {
-						//Make new object without password object
-						var user = {
-							handle: userFound.handle,
-							email: userFound.email,
-							permissions: userFound.permissions
-						};
-						//Send Success.
-						console.log(templates.response(codes.success, "success", user));
-						res.send(templates.response(codes.success, "success", user));
-					} else {
-						//Send error
-						console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
-						res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
-					}
+					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 				}
-			});
-		}
+			}
+		});
 	})
 	.post(function (req, res) {
-		var user = models.user(req.body);
+		var userDetailsToUpdate = models.user(req.body);
 		var userEmail = req.query.email;
-		var updaterSessionToken = req.header('sessionToken');
+		var updaterSessionToken = req.session;
+		if(!updaterSessionToken){
+			throw new templates.error(codes.bad_session_token, "Invalid session", "A valid session token must be in the header");
+			return;
+		}
 		//We need to find a session token so we can get a user ID/
-		models.session.findOne({ token: updaterSessionToken }).exec()
-			.then(function (sessionToken) {
-				if (sessionToken) {
-					//We have a session token so we look up the user. 
-					return models.user.findOne({ _id: sessionToken.user });
-				} else {
-					throw new templates.error(codes.no_user_found, "Invalid user", "Invalid user attempting to update users.");
+		models.user.findOne({ email: userEmail }).exec()
+			.then(function (foundUseruser) {
+				if(!user){
+					throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 				}
-			})
-			.then(function (foundUser) {
-				//We check to make sure the user has mod permissions and has higher permissions than the user they are attempting to update
-				if (foundUseruser && foundUser.permissions >= 5 && foundUser.permissions > user.permissions) {
-					//If we have prereqs, then we find the user to update.
-					return models.user.findOne({ email: userEmail }).exec();
-				} else {
-					throw new templates.error(codes.invalid_permissions, "Invalid permissions", "Invalid permissions to update users");
+		
+				if(updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions){
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
 				}
-			})
-			.then(function (foundUser) {
-				if (foundUser) {
-					//We found the user to update
-					foundUser.email = user.email || foundUser.email;
-					foundUser.handle = user.handle || foundUser.handle;
-					foundUser.permissions = user.permissions || foundUser.permissions;
-					if (user.password) {
-						foundUser.password = utils.createHash(user.password);
-					}
-					return foundUser.save();
-				} else {
-					throw new templates.error(codes.no_user_found, "User not found", "Could not find user to update");
+		
+				if(updaterSessionToken.user.permissions > user.permissions){
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
 				}
+
+				//We found the user to update
+				foundUser.email = userDetailsToUpdate.email || foundUser.email;
+				foundUser.handle = userDetailsToUpdate.handle || foundUser.handle;
+				foundUser.permissions = userDetailsToUpdate.permissions || foundUser.permissions;
+				if (userDetailsToUpdate.password) {
+					foundUser.password = utils.createHash(user.password);
+				}
+				return foundUser.save();
 			})
 			.then(function (savedUser) {
 				var user = {
+					_id: userFound._id,
 					handle: savedUser.handle,
 					email: savedUser.email,
 					permissions: savedUser.permissions
@@ -187,9 +155,106 @@ router.route('/user')
 				res.send(templates.response(codes.success, "success", user));
 			})
 			.catch(function (err) {
-				console.log(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
-				res.send(templates.response(err.code || codes.bad_password, err.data || 'Fail', err.object || 'Error logging in!'));
+				console.log(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
+				res.send(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
 			});
 	});
+
+router.post('/users/:user_id', function () {
+	var updaterSessionToken = req.header('sessionToken');
+	var userDetailsToUpdate = req.body;
+	var user_id = req.params.user_id;
+	if(!updaterSessionToken){
+		res.send(templates.response(codes.bad_session_token, 'Invalid session token or no session token in header', 'Could not retrieve updating user with token in header.'));
+		return;
+	}
+	var promise = models.user.findOne({ _id: user_id }).exec()
+	.then(function(user){
+		if(!user){
+			throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
+		}
+
+		if(updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions){
+			throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+		}
+
+		if(updaterSessionToken.user.permissions > user.permissions){
+			throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+		}
+
+		//We found the user to update
+		session.user.email = userDetailsToUpdate.email || session.user.email.email;
+		session.user.email.handle = userDetailsToUpdate.handle || session.user.email.handle;
+		session.user.email.permissions = userDetailsToUpdate.permissions || session.user.email.permissions;
+		if (userDetailsToUpdate.password) {
+			session.user.password = utils.createHash(userDetailsToUpdate.password);
+		}
+		return session.user.save();
+	})
+	.then(function(user){
+		if(user){
+			res.send(templates.response(codes.success, "success", user));
+		}else{
+			throw new templates.error(codes.fail, "Failed to save user", "DB error");
+		}
+	})
+	.catch(function(err){
+		res.status('400').send(templates.response(err.error_code || codes.fail, err.message || 'Fail', err.error || 'Error updating!'));
+	});
+});
+
+router.get('/users/:user_id', function (req, res) {
+	var user_id = req.params.user_id;
+	models.user.findOne({ _id: user_id }, function (error, userFound) {
+		if (error) {
+			//Send error
+			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+		} else {
+			if (userFound) {
+				//Make new object without password object
+				var user = {
+					_id: userFound._id,
+					handle: userFound.handle,
+					email: userFound.email,
+					permissions: userFound.permissions
+				};
+				//Send Success.
+				console.log(templates.response(codes.success, "success", user));
+				res.send(templates.response(codes.success, "success", user));
+			} else {
+				//Send error
+				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
+			}
+		}
+	});
+});
+
+router.get('/users/handle/:handle', function (req, res) {
+	var user_id = req.params.handle;
+	models.user.findOne({ handle: utils.caseInsensitive(user_id) }, function (error, userFound) {
+		if (error) {
+			//Send error
+			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+		} else {
+			if (userFound) {
+				//Make new object without password object
+				var user = {
+					_id: userFound._id,
+					handle: userFound.handle,
+					email: userFound.email,
+					permissions: userFound.permissions
+				};
+				//Send Success.
+				console.log(templates.response(codes.success, "success", user));
+				res.send(templates.response(codes.success, "success", user));
+			} else {
+				//Send error
+				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
+			}
+		}
+	});
+});
 
 module.exports = router;

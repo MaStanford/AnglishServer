@@ -2,13 +2,8 @@ var express = require('express');
 var router = express.Router();
 var models = require('../modules/models')();
 var templates = require('../modules/templates');
+var codes = templates.codes;
 var utils = require('../modules/utils');
-
-const codes = {
-  success: 1,
-  fail: -1,
-  invalid_permissions: -2
-};
 
 let MIN_WORD_PERMISSION = 2;
 let PUNISHED_USER = 1;
@@ -23,29 +18,18 @@ let PUNISHED_USER = 1;
  */
 router.route('/words')
   .post(function (req, res) {
-    var sesstoken = req.header('sessionToken');
-    console.log('sesstoken is' + sesstoken);
-    var promise = models.session.findOne({token: sesstoken}).populate('user').exec();
-    promise.then(function (session) {
-      if (!session) {
-        throw new Error("Invalid token");
-      }
-      if (!session.user) {
-        throw new Error("User not found");
-      }
-      if (session.user.permissions >= MIN_WORD_PERMISSION) {
-        var word = new models.word(req.body);
-        return word.save();
-      } else {
-        throw new Error("Invalid Permissions");
-      }
+    var session = req.session;
+    if (!session || session.user.permissions < MIN_WORD_PERMISSION) {
+      res.status('400').send(templates.response(codes.fail, "Invalid session or permissions", "Session was either not in the request header or the user does not have permission to add words", req.body));
+      return;
+    }
+    var promise = new models.word(req.body).save()
+    .then(function (word) {
+      res.send(templates.response(codes.success, "success", word, req.body));
     })
-      .then(function (word) {
-        res.send(templates.response(codes.success, "success", word, req.body));
-      })
-      .catch(function (error) {
-        res.status('400').send(templates.response(codes.fail, "fail", error.message, req.body));
-      });
+    .catch(function (error) {
+      res.status('400').send(templates.response(codes.fail, "fail", error.message, req.body));
+    });
   })
   .get(function (req, res) {
     router.getWordbyWord(req, res);
@@ -67,12 +51,12 @@ router.get('/words/:word_id', function (req, res) {
 //Query Param is word_id
 router.getWordbyId = function (req, res) {
 
-  var word_id = req.query.word_id;
+  var word_id = req.params.word_id;
   var populateComments = req.query.populate_comments;
   var promise = {};
 
   //Check to see if we should populate comments.  This is useful
-  if (populateComments && populateComments == true) {
+  if (populateComments && populateComments == 1) {
     promise = models.word.find({ _id: word_id }).populate('comments').exec();
   } else {
     promise = models.word.find({ _id: word_id }).exec();
@@ -99,10 +83,10 @@ router.getWordbyWord = function (req, res) {
   var promise = {};
 
   //Check to see if we should populate comments.  This is useful
-  if (populateComments && populateComments == true) {
-    promise = models.word.find({ word: searchWord }).populate('comments').exec();
+  if (populateComments && populateComments == 1) {
+    promise = models.word.find({ word: utils.caseInsensitive(searchWord) }).populate('comments').exec();
   } else {
-    promise = models.word.find({ word: searchWord }).exec();
+    promise = models.word.find({ word: utils.caseInsensitive(searchWord) }).exec();
   }
   promise.then(function (words) {
     if (utils.isEmpty(words)) {
@@ -151,23 +135,21 @@ router.route('/bulkWord')
  */
 router.route('/comments')
   .post(function (req, res) {
-    var sessionToken = req.header('sessionToken');
+    var session = req.session;
+
+    if (!session || session.user.permissions <= PUNISHED_USER) {
+      res.status('400').send(templates.response(codes.fail, 'Invalid permissions', {}, req.body));
+    }
+
     var newComment = new models.comment(req.body);
-    var promise = models.session.findOne({ token: sessionToken }).populate('user').exec();
-    promise.then(function (session) {
-      if (session.user.permissions > PUNISHED_USER) {
-        return newComment.save();
+    var promise = newComment.save();
+    promise.then(function (comment) {
+      if (comment) {
+        return models.word.findOne({ _id: comment.word }).exec();
       } else {
-        throw new Error('Invalid session or permissions!');
+        throw new Error('Error saving comment to DB');
       }
     })
-      .then(function (comment) {
-        if (comment) {
-          return models.word.find({ _id: comment.word_id }).exec();
-        } else {
-          throw new Error('Error saving comment to DB');
-        }
-      })
       .then(function (word) {
         if (word) {
           word.comments.push(newComment._id);
@@ -178,7 +160,7 @@ router.route('/comments')
       })
       .then(function (word) {
         if (word) {
-          res.send(templates.response(codes.success, "success", comment, req.body));
+          res.send(templates.response(codes.success, "success", newComment, req.body));
         } else {
           throw new Error('Error saving comment to word\'s comment list');
         }
@@ -193,22 +175,22 @@ router.route('/comments')
     res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
   });
 
-router.get('comments/users/:user_id', function (req, res) {
+router.get('/comments/users/:user_id', function (req, res) {
   router.getCommentsbyUser(req, res);
 });
 
-router.get('comments/words/:word_id', function (req, res) {
+router.get('/comments/words/:word_id', function (req, res) {
   router.getCommentsbyWord(req, res);
 });
 
-router.get('comments/:comment_id', function (req, res) {
+router.get('/comments/:comment_id', function (req, res) {
   router.getCommentsbyWord(req, res);
 });
 
 //Get comment by comment_id
 router.getCommentById = function (req, res) {
-  var comment_id = req.query.comment_id;
-  model.comment.findOne(function (error, comment) {
+  var comment_id = req.params.comment_id;
+  model.comment.findOne({ _id: comment_id }, function (error, comment) {
     if (error) {
       res.status('400').send(templates.response(codes.fail, "Comment", error, req.body));
     } else {
@@ -219,7 +201,7 @@ router.getCommentById = function (req, res) {
 
 //Get comments by a user_id
 router.getCommentsbyUser = function (req, res) {
-  var user_id = req.query.user_id;
+  var user_id = req.params.user_id;
   var promise = models.comment.find({ user: user_id }).exec();
   promise.then(function (comments) {
     if (comments) {
@@ -236,7 +218,7 @@ router.getCommentsbyUser = function (req, res) {
 
 //Get comments by a word_id
 router.getCommentsbyWord = function (req, res) {
-  var word_id = req.query.word_id;
+  var word_id = req.params.word_id;
   var promise = models.comment.find({ word: word_id }).populate('user').exec();
   promise.then(function (comments) {
     if (comments) {
