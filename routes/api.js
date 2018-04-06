@@ -170,7 +170,7 @@ router.route('/comments')
       })
       .then(function (word) {
         if (word) {
-          word.comment.push(newComment._id);
+          word.comments.push(newComment._id);
           return word.save();
         } else {
           throw new Error('Error finding word associated with comment.');
