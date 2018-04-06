@@ -23,8 +23,11 @@ let PUNISHED_USER = 1;
  */
 router.route('/words')
   .post(function (req, res) {
-    var sesstoken = req.header('sessionToken');
-    var promise = models.session.findOne({ token: sesstoken }).populate('user').exec();
+    var sesstoken1 = req.header['sessionToken'];
+    var sesstoken2 = req.header('sessionToken');
+    console.log('Session1 is' + sesstoken1);
+    console.log('Session2 is' + sesstoken2);
+    var promise = models.session.findOne({token: sesstoken}).populate('user').exec();
     promise.then(function (session) {
       if (!session) {
         throw new Error("Invalid token");
