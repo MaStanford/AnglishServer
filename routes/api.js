@@ -24,7 +24,7 @@ let PUNISHED_USER = 1;
 router.route('/words')
   .post(function (req, res) {
     var sesstoken = req.header('sessionToken');
-    console.log('sesstoken is' + sesstoken2);
+    console.log('sesstoken is' + sesstoken);
     var promise = models.session.findOne({token: sesstoken}).populate('user').exec();
     promise.then(function (session) {
       if (!session) {
