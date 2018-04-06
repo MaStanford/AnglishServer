@@ -14,6 +14,11 @@ let MIN_WORD_PERMISSION = 2;
 
 /**
  * Post to add word. 
+ * Query param token is session token from /users/login
+ * 
+ * Get to search for word. 
+ * Query param word is search term.  
+ * Query param populate_comments is boolean if you want a populated list of comments, otherwise a list of comment_ids
  */
 router.route('/words')
   .post(function (req, res) {
@@ -45,14 +50,20 @@ router.route('/words')
       });
   })
   .get(function (req, res) {
-    var word_id = req.query.word_id;
-    if (word_id) {
-      router.getWordbyId(req, res);
-    } else {
-      router.getWordbyWord(req, res);
-    }
+    router.getWordbyWord(req, res);
   });
 
+/**
+ * Post to add word. 
+ * Query param token is session token from /users/login
+ * 
+ * Get to search for word. 
+ * Query param word_id is mongo ID if you have id from other object ref
+ * Query param populate_comments is boolean if you want a populated list of comments, otherwise a list of comment_ids
+ */
+router.get('/words/:word_id' , function (req, res) {
+  router.getWordbyId(req, res);
+});
 
 //Function that looks up words by ID
 //Query Param is word_id
@@ -108,6 +119,10 @@ router.getWordbyWord = function (req, res) {
     });
 }
 
+/**
+ * Bulk word insert
+ * Query Param bulk_token is bulk insert key
+ */
 router.route('/bulkWord')
   .post(function (req, res) {
     var token = req.query.bulk_token;
@@ -126,6 +141,16 @@ router.route('/bulkWord')
     }
   });
 
+/**
+ * Post to create comment. 
+ * Body is comment object
+ * 
+ * Get to retrieve list of comments by user or word.
+ * Word can be used to return a populated list of comments.
+ * Either param is ok:
+ * Query param user_id is user id to get all comments from.
+ * Query param word_id is word id to get all comments from.
+ */
 router.route('/comments')
   .post(function (req, res) {
     var newComment = new models.comment(req.body);
@@ -160,38 +185,64 @@ router.route('/comments')
   .put(function (req, res) {
     //Feature not ready yet
     res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
-  })
-  .get(function (req, res) {
-    var user_id = req.query.user_id;
-    var word_id = req.query.word_id;
-    //Check if we are looking up all comments by user, or all comments by word.
-    if (user_id) {
-      var promise = models.comment.find({ user: user_id }).populate('user').exec();
-      promise.then(function (comments) {
-        if (comments) {
-          res.send(templates.response(codes.success, "success", comments, req.body));
-        } else {
-          res.status('400').send(templates.response(codes.fail, "Comments not found", 'Unable to find comments', req.body));
-        }
-      })
-        .catch(function (err) {
-          console.log('Error: ' + err.message);
-          res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
-        });
+  });
+
+router.get('comments/users/:user_id', function (req, res) {
+  router.getCommentsbyUser(req, res);
+});
+
+router.get('comments/words/:word_id', function (req, res) {
+  router.getCommentsbyWord(req, res);
+});
+
+router.get('comments/:comment_id', function (req, res) {
+  router.getCommentsbyWord(req, res);
+});
+
+//Get comment by comment_id
+router.getCommentById = function (req, res) {
+  var comment_id = req.query.comment_id;
+  model.comments.findOne(function(error, comment){
+    if (error) {
+      res.status('400').send(templates.response(codes.fail, "Comment", error, req.body));
     } else {
-      var promise = models.comment.find({ word: word_id }).populate('user').exec();
-      promise.then(function (comments) {
-        if (comments) {
-          res.send(templates.response(codes.success, "success", comments, req.body));
-        } else {
-          res.status('400').send(templates.response(codes.fail, "Comments not found", 'Unable to find comments', req.body));
-        }
-      })
-        .catch(function (err) {
-          console.log('Error: ' + err.message);
-          res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
-        });
+      res.send(templates.response(codes.success, "success", comment, req.body));
     }
   });
+};
+
+//Get comments by a user_id
+router.getCommentsbyUser = function (req, res) {
+  var user_id = req.query.user_id;
+  var promise = models.comment.find({ user: user_id }).exec();
+  promise.then(function (comments) {
+    if (comments) {
+      res.send(templates.response(codes.success, "success", comments, req.body));
+    } else {
+      res.status('400').send(templates.response(codes.fail, "Comments not found", 'Unable to find comments', req.body));
+    }
+  })
+    .catch(function (err) {
+      console.log('Error: ' + err.message);
+      res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
+    });
+};
+
+//Get comments by a word_id
+router.getCommentsbyWord = function (req, res) {
+  var word_id = req.query.word_id;
+  var promise = models.comment.find({ word: word_id }).populate('user').exec();
+  promise.then(function (comments) {
+    if (comments) {
+      res.send(templates.response(codes.success, "success", comments, req.body));
+    } else {
+      res.status('400').send(templates.response(codes.fail, "Comments not found", 'Unable to find comments', req.body));
+    }
+  })
+    .catch(function (err) {
+      console.log('Error: ' + err.message);
+      res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
+    });
+};
 
 module.exports = router;
