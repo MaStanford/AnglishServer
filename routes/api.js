@@ -11,6 +11,7 @@ const codes = {
 };
 
 let MIN_WORD_PERMISSION = 2;
+let PUNISHED_USER = 1;
 
 /**
  * Post to add word. 
@@ -22,26 +23,22 @@ let MIN_WORD_PERMISSION = 2;
  */
 router.route('/words')
   .post(function (req, res) {
-    var sesstoken = req.query.token;
-    var promise = models.session.findOne({ token: sesstoken }).populate('comments').exec();
+    var sesstoken = req.header('sessionToken');
+    var promise = models.session.findOne({ token: sesstoken }).populate('user').exec();
     promise.then(function (session) {
       if (!session) {
         throw new Error("Invalid token");
+      }
+      if (!session.user) {
+        throw new Error("User not found");
+      }
+      if (session.user.permissions >= MIN_WORD_PERMISSION) {
+        var word = new models.word(req.body);
+        return word.save();
       } else {
-        return models.user.findOne({ _id: session.user });
+        throw new Error("Invalid Permissions");
       }
     })
-      .then(function (user) {
-        if (!user) {
-          throw new Error("User not found");
-        }
-        if (user.permissions >= MIN_WORD_PERMISSION) {
-          var word = new models.word(req.body);
-          return word.save();
-        } else {
-          throw new Error("Invalid Permissions");
-        }
-      })
       .then(function (word) {
         res.send(templates.response(codes.success, "success", word, req.body));
       })
@@ -61,7 +58,7 @@ router.route('/words')
  * Query param word_id is mongo ID if you have id from other object ref
  * Query param populate_comments is boolean if you want a populated list of comments, otherwise a list of comment_ids
  */
-router.get('/words/:word_id' , function (req, res) {
+router.get('/words/:word_id', function (req, res) {
   router.getWordbyId(req, res);
 });
 
@@ -153,15 +150,23 @@ router.route('/bulkWord')
  */
 router.route('/comments')
   .post(function (req, res) {
+    var sessionToken = req.header('sessionToken');
     var newComment = new models.comment(req.body);
-    var promise = newComment.save();
-    promise.then(function (comment) {
-      if (comment) {
-        return models.word.find({ _id: comment.word_id }).exec();
+    var promise = models.sessions.findOne({ toke: sessionToken }).populate('user').exec();
+    promise.then(function (session) {
+      if (session.user.permissions > PUNISHED_USER) {
+        return newComment.save();
       } else {
-        throw new Error('Error saving comment to DB');
+        throw new Error('Invalid session or permissions!');
       }
     })
+      .then(function (comment) {
+        if (comment) {
+          return models.word.find({ _id: comment.word_id }).exec();
+        } else {
+          throw new Error('Error saving comment to DB');
+        }
+      })
       .then(function (word) {
         if (word) {
           word.comments.push(newComment);
@@ -202,7 +207,7 @@ router.get('comments/:comment_id', function (req, res) {
 //Get comment by comment_id
 router.getCommentById = function (req, res) {
   var comment_id = req.query.comment_id;
-  model.comments.findOne(function(error, comment){
+  model.comments.findOne(function (error, comment) {
     if (error) {
       res.status('400').send(templates.response(codes.fail, "Comment", error, req.body));
     } else {

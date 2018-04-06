@@ -45,7 +45,7 @@ router.route('/login')
 	});
 
 router.route('/logout').post(function (req, res) {
-	models.session.remove({ token: req.body.token }, function (error) {
+	models.session.remove({ token: req.header('sessionToken')}, function (error) {
 		if (error) {
 			//Send Error.
 			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
@@ -143,7 +143,7 @@ router.route('/user')
 	.post(function (req, res) {
 		var user = models.user(req.body);
 		var userEmail = req.query.email;
-		var updaterSessionToken = req.query.sessionToken;
+		var updaterSessionToken = req.header('sessionToken');
 		//We need to find a session token so we can get a user ID/
 		models.session.findOne({ token: updaterSessionToken }).exec()
 			.then(function (sessionToken) {
