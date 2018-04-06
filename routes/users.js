@@ -89,29 +89,56 @@ router.route('/register').post(function (req, res) {
  */
 router.route('/user')
 	.get(function (req, res) {
-		var user = req.query.user;
-		models.user.findOne({ email: user }, function (error, userFound) {
-			if (error) {
-				//Send error
-				res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
-			} else {
-				if (userFound) {
-					//Make new object without password object
-					var user = {
-						handle: userFound.handle,
-						email: userFound.email,
-						permissions: userFound.permissions
-					};
-					//Send Success.
-					console.log(templates.response(codes.success, "success", user));
-					res.send(templates.response(codes.success, "success", user));
-				} else {
+		var user_email = req.query.email;
+		var user_id
+		//Check if we have the email or id
+		if(user_email){
+			models.user.findOne({ email: user_email }, function (error, userFound) {
+				if (error) {
 					//Send error
-					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
-					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
+					res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+				} else {
+					if (userFound) {
+						//Make new object without password object
+						var user = {
+							handle: userFound.handle,
+							email: userFound.email,
+							permissions: userFound.permissions
+						};
+						//Send Success.
+						console.log(templates.response(codes.success, "success", user));
+						res.send(templates.response(codes.success, "success", user));
+					} else {
+						//Send error
+						console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+						res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
+					}
 				}
-			}
-		});
+			});
+		}else{
+			models.user.findOne({_id: user_id}, function (error, userFound) {
+				if (error) {
+					//Send error
+					res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+				} else {
+					if (userFound) {
+						//Make new object without password object
+						var user = {
+							handle: userFound.handle,
+							email: userFound.email,
+							permissions: userFound.permissions
+						};
+						//Send Success.
+						console.log(templates.response(codes.success, "success", user));
+						res.send(templates.response(codes.success, "success", user));
+					} else {
+						//Send error
+						console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+						res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
+					}
+				}
+			});
+		}
 	})
 	.post(function (req, res) {
 		var user = models.user(req.body);

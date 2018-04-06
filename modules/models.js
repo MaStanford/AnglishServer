@@ -21,7 +21,7 @@ module.exports = function (){
 	db.on('error', console.error.bind(console, 'connection error:'));
 	db.once('open', function() {
 
-		//Users scheme
+		//Users scheme _ids are default to all objects
 		context.userSchema = mongoose.Schema({
 			handle: {type: String, unique: true, required: true, dropDups: true },
 			email: {type: String, unique: true, required: true, dropDups: true },
@@ -35,7 +35,8 @@ module.exports = function (){
 			word:{type: String, required: true},
 			attested: String,
 			unattested: String,
-			type: String
+			type: String,
+			comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'comments'}]
 		});
 		context.word = mongoose.model('words', context.wordSchema);	
 
