@@ -153,7 +153,7 @@ router.route('/comments')
   .post(function (req, res) {
     var sessionToken = req.header('sessionToken');
     var newComment = new models.comment(req.body);
-    var promise = models.session.findOne({ toke: sessionToken }).populate('user').exec();
+    var promise = models.session.findOne({ token: sessionToken }).populate('user').exec();
     promise.then(function (session) {
       if (session.user.permissions > PUNISHED_USER) {
         return newComment.save();
