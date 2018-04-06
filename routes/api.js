@@ -81,7 +81,9 @@ router.getWordbyWord = function (req, res) {
   var searchWord = req.query.word;
   var populateComments = req.query.populate_comments;
   var promise = {};
-
+  
+  console.log(req.query);
+  console.log('Query: ' + searchWord + ' populate comments: ' + populateComments);
   //Check to see if we should populate comments.  This is useful
   if (populateComments && populateComments == 1) {
     promise = models.word.find({ word: utils.caseInsensitive(searchWord) }).populate('comments').exec();
@@ -142,8 +144,8 @@ router.route('/comments')
     }
 
     var newComment = new models.comment(req.body);
-    var promise = newComment.save();
-    promise.then(function (comment) {
+    var promise = newComment.save()
+    .then(function (comment) {
       if (comment) {
         return models.word.findOne({ _id: comment.word }).exec();
       } else {
@@ -175,22 +177,22 @@ router.route('/comments')
     res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
   });
 
-router.get('/comments/users/:user_id', function (req, res) {
+router.get('/comments/user/:user_id', function (req, res) {
   router.getCommentsbyUser(req, res);
 });
 
-router.get('/comments/words/:word_id', function (req, res) {
+router.get('/comments/word/:word_id', function (req, res) {
   router.getCommentsbyWord(req, res);
 });
 
-router.get('/comments/:comment_id', function (req, res) {
-  router.getCommentsbyWord(req, res);
+router.get('/comments/comment/:comment_id', function (req, res) {
+  router.getCommentById(req, res);
 });
 
 //Get comment by comment_id
 router.getCommentById = function (req, res) {
   var comment_id = req.params.comment_id;
-  model.comment.findOne({ _id: comment_id }, function (error, comment) {
+  models.comment.findOne({ _id: comment_id }, function (error, comment) {
     if (error) {
       res.status('400').send(templates.response(codes.fail, "Comment", error, req.body));
     } else {
