@@ -75,4 +75,11 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+// //https://www.npmjs.com/package/express-api-doc
+// const Docs = require('express-api-doc');
+// const docs = new Docs(app);
+// docs.generate({
+//   path: './template.html',
+// });
+
 module.exports = app;

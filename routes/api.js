@@ -24,12 +24,12 @@ router.route('/words')
       return;
     }
     var promise = new models.word(req.body).save()
-    .then(function (word) {
-      res.send(templates.response(codes.success, "success", word, req.body));
-    })
-    .catch(function (error) {
-      res.status('400').send(templates.response(codes.fail, "fail", error.message, req.body));
-    });
+      .then(function (word) {
+        res.send(templates.response(codes.success, "success", word, req.body));
+      })
+      .catch(function (error) {
+        res.status('400').send(templates.response(codes.fail, "fail", error.message, req.body));
+      });
   })
   .get(function (req, res) {
     router.getWordbyWord(req, res);
@@ -81,7 +81,7 @@ router.getWordbyWord = function (req, res) {
   var searchWord = req.query.word;
   var populateComments = req.query.populate_comments;
   var promise = {};
-  
+
   console.log(req.query);
   console.log('Query: ' + searchWord + ' populate comments: ' + populateComments);
   //Check to see if we should populate comments.  This is useful
@@ -145,13 +145,13 @@ router.route('/comments')
 
     var newComment = new models.comment(req.body);
     var promise = newComment.save()
-    .then(function (comment) {
-      if (comment) {
-        return models.word.findOne({ _id: comment.word }).exec();
-      } else {
-        throw new Error('Error saving comment to DB');
-      }
-    })
+      .then(function (comment) {
+        if (comment) {
+          return models.word.findOne({ _id: comment.word }).exec();
+        } else {
+          throw new Error('Error saving comment to DB');
+        }
+      })
       .then(function (word) {
         if (word) {
           word.comments.push(newComment._id);
@@ -171,10 +171,6 @@ router.route('/comments')
         console.log('Error: ' + err.message);
         res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
       });
-  })
-  .put(function (req, res) {
-    //Feature not ready yet
-    res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
   });
 
 router.get('/comments/user/:user_id', function (req, res) {
@@ -189,6 +185,14 @@ router.get('/comments/comment/:comment_id', function (req, res) {
   router.getCommentById(req, res);
 });
 
+router.delete('/comments/comment/:comment_id', function (req, res) {
+  router.deleteCommentById(req, res);
+});
+
+router.post('/comments/comment/:comment_id', function (req, res) {
+  res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
+});
+
 //Get comment by comment_id
 router.getCommentById = function (req, res) {
   var comment_id = req.params.comment_id;
@@ -199,6 +203,32 @@ router.getCommentById = function (req, res) {
       res.send(templates.response(codes.success, "success", comment, req.body));
     }
   });
+};
+
+//Get comment by comment_id
+router.deleteCommentById = function (req, res) {
+  var comment_id = req.params.comment_id;
+  var session = req.session;
+  if (!session) {
+    res.status('400').send(templates.response(codes.fail, 'Invalid session token', req.body));
+    return;
+  }
+  models.comment.findOne({ _id: comment_id }).populate('user').exec()
+    .then(function (comment) {
+      if (comment) {
+        if (comment.user._id == session.user._id || session.user.permissions >= 5) {
+          return comment.remove();
+        } else {
+          throw new Error('Invalid permissions to remove comment');
+        }
+      }else{
+        throw new Error('Comment not found');
+      }
+    }).then(function (comment) {
+      res.send(templates.response(codes.success, "success", comment));
+    }).catch(function (err) {
+      res.status('400').send(templates.response(codes.fail, err.message, err));
+    });
 };
 
 //Get comments by a user_id
