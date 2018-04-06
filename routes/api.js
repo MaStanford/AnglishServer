@@ -153,7 +153,7 @@ router.route('/comments')
   .post(function (req, res) {
     var sessionToken = req.header('sessionToken');
     var newComment = new models.comment(req.body);
-    var promise = models.sessions.findOne({ toke: sessionToken }).populate('user').exec();
+    var promise = models.session.findOne({ toke: sessionToken }).populate('user').exec();
     promise.then(function (session) {
       if (session.user.permissions > PUNISHED_USER) {
         return newComment.save();
@@ -208,7 +208,7 @@ router.get('comments/:comment_id', function (req, res) {
 //Get comment by comment_id
 router.getCommentById = function (req, res) {
   var comment_id = req.query.comment_id;
-  model.comments.findOne(function (error, comment) {
+  model.comment.findOne(function (error, comment) {
     if (error) {
       res.status('400').send(templates.response(codes.fail, "Comment", error, req.body));
     } else {
