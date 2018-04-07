@@ -25,7 +25,14 @@ module.exports = function (){
 			handle: {type: String, unique: true, required: true, dropDups: true },
 			email: {type: String, unique: true, required: true, dropDups: true },
 			password: {type: String, required: true},
-			permissions: { type: Number, default: 0 }
+			permissions: { type: Number, default: 0 },
+			createdAt:{ type: Date, default: Date.now },
+			updatedAt:{ type: Date, default: Date.now }
+		});
+		context.userSchema.pre('save', function(next){
+			var something = this;
+			something.set({updatedAt: Date.now()});
+			next();
 		});
 		context.user = mongoose.model('users', context.userSchema);
 
@@ -35,7 +42,14 @@ module.exports = function (){
 			attested: String,
 			unattested: String,
 			type: String,
-			comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'comments'}]
+			comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'comments'}],
+			createdAt:{ type: Date, default: Date.now },
+			updatedAt:{ type: Date, default: Date.now }
+		});
+		context.wordSchema.pre('save', function(next){
+			var something = this;
+			something.set({updatedAt: Date.now()});
+			next();
 		});
 		context.word = mongoose.model('words', context.wordSchema);	
 
@@ -44,7 +58,14 @@ module.exports = function (){
 			oe: String,
 			ne: String,
 			meaning: String,
-			extra: String
+			extra: String,
+			createdAt:{ type: Date, default: Date.now },
+			updatedAt:{ type: Date, default: Date.now }
+		});
+		context.nameSchema.pre('save', function(next){
+			var something = this;
+			something.set({updatedAt: Date.now()});
+			next();
 		});
 		context.name = mongoose.model('names', context.nameSchema);	
 
@@ -52,7 +73,13 @@ module.exports = function (){
 		context.sessionSchema = mongoose.Schema({
 			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users', unique: true, required: true, dropDups: true },
 			token:{type: String, unique: true, required: true, dropDups: true },
-			dateCreated: { type: Date, default: Date.now }
+			createdAt:{ type: Date, default: Date.now },
+			updatedAt:{ type: Date, default: Date.now }
+		});
+		context.sessionSchema.pre('save', function(next){
+			var something = this;
+			something.set({updatedAt: Date.now()});
+			next();
 		});
 		context.session = mongoose.model('sessions', context.sessionSchema);
 
@@ -60,7 +87,14 @@ module.exports = function (){
 		context.commentSchema = mongoose.Schema({
 			user:{type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true},
 			word:{type: mongoose.Schema.Types.ObjectId, ref: 'words', required: true},
-			comment:{type: String, required: true}
+			comment:{type: String, required: true},
+			createdAt:{ type: Date, default: Date.now},
+			updatedAt:{ type: Date, default: Date.now}
+		});
+		context.commentSchema.pre('save', function(next){
+				var something = this;
+				something.set({updatedAt: Date.now()});
+				next();
 		});
 		context.comment = mongoose.model('comments', context.commentSchema);
 	});
