@@ -42,30 +42,30 @@ router.route('/words')
  * Query Body is the new word.
  * Does not update comments, only word, type, attested and unattested
  */
-router.post('/words/:word_id', function(req, res){
+router.post('/words/:word_id', function (req, res) {
   var session = req.session;
   var word_id = req.params.word_id;
   var updateWord = new models.word(req.body);
-  
-  if(!session || session.user.permissions < MIN_WORD_PERMISSION){
+
+  if (!session || session.user.permissions < MIN_WORD_PERMISSION) {
     res.status('400').send(templates.response(codes.invalid_permissions, 'No session found', 'An invalid session token or no session token was in header.', req.body));
   }
 
-  var promise = models.word.findOne({_id: word_id}).exec();
-  
-  promise.then(function(word){
+  var promise = models.word.findOne({ _id: word_id }).exec();
+
+  promise.then(function (word) {
     word.word = updateWord.word || word.word;
     word.type = updateWord.type || word.type;
     word.attested = updateWord.attested || word.attested;
     word.unattested = updateWord.unattested || word.unattested;
     return word.save();
   })
-  .then(function(word){
-    res.send(templates.response(codes.success, "success", word, req.body));
-  })
-  .catch(function(err){
-    res.status('400').send(templates.response(err.error_code, err.message, error.error, req.body));
-  });
+    .then(function (word) {
+      res.send(templates.response(codes.success, "success", word, req.body));
+    })
+    .catch(function (err) {
+      res.status('400').send(templates.response(err.error_code, err.message, error.error, req.body));
+    });
 });
 
 /**
@@ -246,28 +246,39 @@ router.deleteCommentById = function (req, res) {
     res.status('400').send(templates.response(codes.fail, 'Invalid session token', req.body));
     return;
   }
+
   models.comment.findOne({ _id: comment_id }).populate('user').exec()
     .then(function (comment) {
       if (comment) {
-        if (comment.user._id == session.user._id || session.user.permissions >= 5) {
-          return comment.remove();
+        if (comment.user._id == session.user._id || session.user.permissions >= 4) {
+          return models.comment.findOneAndRemove({ _id: comment_id }).populate('word').exec();
         } else {
-          throw new Error('Invalid permissions to remove comment');
+          throw new templates.error(codes.invalid_permissions, 'Invalid permissions', comment);
         }
-      }else{
-        throw new Error('Comment not found');
+      } else {
+        throw new templates.error(codes.fail, 'Comment not found', comment);
       }
     })
-    .then(function(comment){
-      return models.word.findOne({_id: comment.word}).exec();
-    })
-    .then(function(word){
-      return word.comments.id(comment_id).remove();
-    })
     .then(function (comment) {
-      res.send(templates.response(codes.success, "success", comment));
+      if (comment) {
+        return models.word.findOne({ _id: comment.word }).populate('comments').exec();
+      } else {
+        throw new templates.error(codes.fail, 'Comment not found', comment);
+      }
+    })
+    .then(function (word) {
+      if (word) {
+        console.log(word);
+        word.comments.pull(comment_id);
+        return word.save();
+      } else {
+        throw new templates.error(codes.fail, 'Comment not found', comment);
+      }
+    })
+    .then(function (word) {
+      res.send(templates.response(codes.success, "success", word));
     }).catch(function (err) {
-      res.status('400').send(templates.response(codes.fail, err.message, err));
+      res.status('400').send(templates.response(err.error_code, err.message, err.error));
     });
 };
 

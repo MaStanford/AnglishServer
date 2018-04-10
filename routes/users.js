@@ -44,14 +44,14 @@ router.route('/login')
 	});
 
 router.route('/logout').post(function (req, res) {
-	models.session.remove({ token: req.header('sessionToken') }, function (error) {
+	models.session.remove({ token: req.header('sessionToken') }, function (error, userFound) {
 		if (error) {
 			//Send Error.
 			console.log(templates.response(codes.fail, "fail", "Error logging out user."));
 			res.status('400').send(templates.response(codes.fail, "fail", "Error logging out user."));
 		} else {
 			//Send Success.
-			res.send(templates.response(codes.success, "success", {}));
+			res.send(templates.response(codes.success, "Logged out", userFound));
 		}
 	});
 });
