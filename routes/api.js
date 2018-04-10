@@ -224,7 +224,14 @@ router.deleteCommentById = function (req, res) {
       }else{
         throw new Error('Comment not found');
       }
-    }).then(function (comment) {
+    })
+    .then(function(comment){
+      return models.word.findOne({_id: comment.word}).exec();
+    })
+    .then(function(word){
+      return word.comments.id(comment_id).remove();
+    })
+    .then(function (comment) {
       res.send(templates.response(codes.success, "success", comment));
     }).catch(function (err) {
       res.status('400').send(templates.response(codes.fail, err.message, err));
