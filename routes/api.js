@@ -35,6 +35,39 @@ router.route('/words')
     router.getWordbyWord(req, res);
   });
 
+
+/**
+ * Update a word. 
+ * Query param is the word id
+ * Query Body is the new word.
+ * Does not update comments, only word, type, attested and unattested
+ */
+router.post('/words/:word_id', function(req, res){
+  var session = req.session;
+  var word_id = req.params.word_id;
+  var updateWord = new models.word(req.body);
+  
+  if(!session || session.user.permissions < MIN_WORD_PERMISSION){
+    res.status('400').send(templates.response(codes.invalid_permissions, 'No session found', 'An invalid session token or no session token was in header.', req.body));
+  }
+
+  var promise = models.word.findOne({_id: word_id}).exec();
+  
+  promise.then(function(word){
+    word.word = updateWord.word || word.word;
+    word.type = updateWord.type || word.type;
+    word.attested = updateWord.attested || word.attested;
+    word.unattested = updateWord.unattested || word.unattested;
+    return word.save();
+  })
+  .then(function(word){
+    res.send(templates.response(codes.success, "success", word, req.body));
+  })
+  .catch(function(err){
+    res.status('400').send(templates.response(err.error_code, err.message, error.error, req.body));
+  });
+});
+
 /**
  * Post to add word. 
  * Query param token is session token from /users/login

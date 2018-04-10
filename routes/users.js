@@ -149,8 +149,6 @@ router.route('/user')
 				if (userDetailsToUpdate.password) {
 					user.password = utils.createHash(user.password);
 				}
-				console.log('result:');
-				console.log(user);
 				return user.save();
 			})
 			.then(function (savedUser) {
