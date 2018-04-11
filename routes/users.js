@@ -289,7 +289,7 @@ router.get('/user/:user_id', function (req, res) {
 
 router.get('/user/handle/:handle', function (req, res) {
 	var user_id = req.params.handle;
-	models.user.findOne({ handle: utils.caseInsensitive(user_id) }, function (error, userFound) {
+	models.user.find({ handle: utils.caseInsensitive(user_id) }, function (error, userFound) {
 		if (error) {
 			//Send error
 			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
@@ -307,7 +307,7 @@ router.get('/user/handle/:handle', function (req, res) {
 				res.send(templates.response(codes.success, "success", user));
 			} else {
 				//Send error
-				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+				console.log(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 			}
 		}
