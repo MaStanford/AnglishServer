@@ -90,7 +90,7 @@ router.route('/register').post(function (req, res) {
  * Post requires a query param of the session token and a query param of the to be updates user's email 
  * and a body of the updated fields.
  */
-router.get('/user', function (req, res) {
+router.get('/user/email', function (req, res) {
 	var user_email = req.query.email;
 	models.user.findOne({ email: utils.caseInsensitive(user_email) }, '_id handle email permissions', function (error, userFound) {
 		if (error) {
