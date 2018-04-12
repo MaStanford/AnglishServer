@@ -150,7 +150,7 @@ router.get('/user/handle/:handle', function (req, res) {
 	});
 });
 
-router.post('/user', function (req, res) {
+router.post('/user/email', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
 	console.log('Body:');
 	console.log(userDetailsToUpdate);
