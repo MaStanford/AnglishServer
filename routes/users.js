@@ -289,22 +289,15 @@ router.get('/user/:user_id', function (req, res) {
 
 router.get('/user/handle/:handle', function (req, res) {
 	var user_id = req.params.handle;
-	models.user.find({ handle: utils.caseInsensitive(user_id) }, function (error, userFound) {
+	models.user.find({ handle: utils.caseInsensitive(user_id) }, '_id handle email permissions', function (error, userFound) {
 		if (error) {
 			//Send error
 			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
 		} else {
 			if (userFound) {
-				//Make new object without password object
-				var user = {
-					_id: userFound._id,
-					handle: userFound.handle,
-					email: userFound.email,
-					permissions: userFound.permissions
-				};
 				//Send Success.
-				console.log(templates.response(codes.success, "success", user));
-				res.send(templates.response(codes.success, "success", user));
+				console.log(templates.response(codes.success, "success", userFound));
+				res.send(templates.response(codes.success, "success", userFound));
 			} else {
 				//Send error
 				console.log(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
