@@ -5,6 +5,9 @@ var utils = require('../modules/utils');
 var templates = require('../modules/templates');
 var codes = templates.codes;
 
+let BASIC_USER = 2;
+let MIN_MOD = 4;
+
 router.route('/login')
 	.post(function (req, res) {
 		var loggingInUser = {};
@@ -58,6 +61,7 @@ router.route('/logout').post(function (req, res) {
 
 router.route('/register').post(function (req, res) {
 	var user = models.user(req.body);
+	user.permissions = BASIC_USER;
 	user.password = utils.createHash(user.password);
 	user.save(function (error, user) {
 		if (error) {
@@ -86,165 +90,24 @@ router.route('/register').post(function (req, res) {
  * Post requires a query param of the session token and a query param of the to be updates user's email 
  * and a body of the updated fields.
  */
-router.route('/user')
-	.get(function (req, res) {
-		var user_email = req.query.email;
-		models.user.findOne({ email: utils.caseInsensitive(user_email)}, '_id handle email permissions', function (error, userFound) {
-			if (error) {
+router.get('/user', function (req, res) {
+	var user_email = req.query.email;
+	models.user.findOne({ email: utils.caseInsensitive(user_email) }, '_id handle email permissions', function (error, userFound) {
+		if (error) {
+			//Send error
+			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
+		} else {
+			if (userFound) {
+				//Send Success.
+				console.log(templates.response(codes.success, "success", userFound));
+				res.send(templates.response(codes.success, "success", userFound));
+			} else {
 				//Send error
-				res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
-			} else {
-				if (userFound) {
-					//Send Success.
-					console.log(templates.response(codes.success, "success", userFound));
-					res.send(templates.response(codes.success, "success", userFound));
-				} else {
-					//Send error
-					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
-					res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
-				}
+				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
+				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 			}
-		});
-	})
-	.post(function (req, res) {
-		var userDetailsToUpdate = models.user(req.body);
-		console.log('Body:');
-		console.log(userDetailsToUpdate);
-		var userEmail = req.query.email;
-		var updaterSessionToken = req.session;
-		if (!updaterSessionToken) {
-			throw new templates.error(codes.bad_session_token, "Invalid session", "A valid session token must be in the header");
-			return;
 		}
-		//We need to find a session token so we can get a user ID/
-		models.user.findOne({ email: userEmail }, '_id handle email permissions').exec()
-			.then(function (user) {
-				if (!user) {
-					throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
-				}
-
-				if (updaterSessionToken.user.permissions <= user.permissions) {
-					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
-				}
-
-				if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
-				}
-
-				//We found the user to update
-				user.email = userDetailsToUpdate.email || user.email;
-				user.handle = userDetailsToUpdate.handle || user.handle;
-				//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
-				if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
-					user.permissions = userDetailsToUpdate.permissions;
-				}
-				//Gotta make a hash in this case.
-				if (userDetailsToUpdate.password) {
-					user.password = utils.createHash(user.password);
-				}
-				return user.save();
-			})
-			.then(function (savedUser) {
-				res.send(templates.response(codes.success, "success", user));
-			})
-			.catch(function (err) {
-				console.log(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
-				res.send(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
-			});
 	});
-
-router.post('/user/:user_id', function (req, res) {
-	var updaterSessionToken = req.session;
-	var userDetailsToUpdate = models.user(req.body);
-	var user_id = req.params.user_id;
-	if (!updaterSessionToken) {
-		res.send(templates.response(codes.bad_session_token, 'Invalid session token or no session token in header', 'Could not retrieve updating user with token in header.'));
-		return;
-	}
-	var promise = models.user.findOne({ _id: user_id }).exec()
-		.then(function (user) {
-			if (!user) {
-				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
-			}
-
-			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
-			}
-
-			if (updaterSessionToken.user.permissions <= user.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
-			}
-
-			//We found the user to update
-			user.email = userDetailsToUpdate.email || user.email;
-			user.handle = userDetailsToUpdate.handle || user.handle;
-			//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
-			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
-				user.permissions = userDetailsToUpdate.permissions;
-			} 
-			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(userDetailsToUpdate.password);
-			}
-			return user.save();
-		})
-		.then(function (user) {
-			if (user) {
-				res.send(templates.response(codes.success, "success", user));
-			} else {
-				throw new templates.error(codes.fail, "Failed to save user", "DB error");
-			}
-		})
-		.catch(function (err) {
-			res.status('400').send(templates.response(err.error_code || codes.fail, err.message || 'Fail', err.error || 'Error updating!'));
-		});
-});
-
-router.post('/user/handle/:user_id', function (req, res) {
-	var updaterSessionToken = req.session;
-	var userDetailsToUpdate = models.user(req.body);
-	console.log(userDetailsToUpdate);
-	var user_id = req.params.user_id;
-	if (!updaterSessionToken) {
-		res.send(templates.response(codes.bad_session_token, 'Invalid session token or no session token in header', 'Could not retrieve updating user with token in header.'));
-		return;
-	}
-	var promise = models.user.findOne({ handle: user_id }).exec()
-		.then(function (user) {
-			if (!user) {
-				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
-			}
-
-			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
-			}
-
-			if (updaterSessionToken.user.permissions <= user.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
-			}
-
-			//We found the user to update
-			user.email = userDetailsToUpdate.email || user.email;
-			user.handle = userDetailsToUpdate.handle || user.handle;
-			//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
-			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
-				user.permissions = userDetailsToUpdate.permissions;
-			} 
-			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(userDetailsToUpdate.password);
-			}
-			console.log(user);
-			return user.save();
-		})
-		.then(function (user) {
-			if (user) {
-				res.send(templates.response(codes.success, "success", user));
-			} else {
-				throw new templates.error(codes.fail, "Failed to save user", "DB error");
-			}
-		})
-		.catch(function (err) {
-			res.status('400').send(templates.response(err.error_code || codes.fail, err.message || 'Fail', err.error || 'Error updating!'));
-		});
 });
 
 router.get('/user/:user_id', function (req, res) {
@@ -285,6 +148,147 @@ router.get('/user/handle/:handle', function (req, res) {
 			}
 		}
 	});
+});
+
+router.post('/user', function (req, res) {
+	var userDetailsToUpdate = models.user(req.body);
+	console.log('Body:');
+	console.log(userDetailsToUpdate);
+	var userEmail = req.query.email;
+	var updaterSessionToken = req.session;
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
+		return;
+	}
+	//We need to find a session token so we can get a user ID/
+	models.user.findOne({ email: userEmail }, '_id handle email permissions').exec()
+		.then(function (user) {
+			if (!user) {
+				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
+			}
+
+			if (updaterSessionToken.user.permissions <= user.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+			}
+
+			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+			}
+
+			//We found the user to update
+			user.email = userDetailsToUpdate.email || user.email;
+			user.handle = userDetailsToUpdate.handle || user.handle;
+			//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
+			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
+				user.permissions = userDetailsToUpdate.permissions;
+			}
+			//Gotta make a hash in this case.
+			if (userDetailsToUpdate.password) {
+				user.password = utils.createHash(user.password);
+			}
+			return user.save();
+		})
+		.then(function (savedUser) {
+			res.send(templates.response(codes.success, "success", user));
+		})
+		.catch(function (err) {
+			console.log(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
+			res.send(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
+		});
+});
+
+router.post('/user/:user_id', function (req, res) {
+	var updaterSessionToken = req.session;
+	var userDetailsToUpdate = models.user(req.body);
+	var user_id = req.params.user_id;
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
+		return;
+	}
+	var promise = models.user.findOne({ _id: user_id }).exec()
+		.then(function (user) {
+			if (!user) {
+				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
+			}
+
+			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+			}
+
+			if (updaterSessionToken.user.permissions <= user.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+			}
+
+			//We found the user to update
+			user.email = userDetailsToUpdate.email || user.email;
+			user.handle = userDetailsToUpdate.handle || user.handle;
+			//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
+			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
+				user.permissions = userDetailsToUpdate.permissions;
+			}
+			if (userDetailsToUpdate.password) {
+				user.password = utils.createHash(userDetailsToUpdate.password);
+			}
+			return user.save();
+		})
+		.then(function (user) {
+			if (user) {
+				res.send(templates.response(codes.success, "success", user));
+			} else {
+				throw new templates.error(codes.fail, "Failed to save user", "DB error");
+			}
+		})
+		.catch(function (err) {
+			res.status('400').send(templates.response(err.error_code || codes.fail, err.message || 'Fail', err.error || 'Error updating!'));
+		});
+});
+
+router.post('/user/handle/:user_id', function (req, res) {
+	var updaterSessionToken = req.session;
+	var userDetailsToUpdate = models.user(req.body);
+	console.log(userDetailsToUpdate);
+	var user_id = req.params.user_id;
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
+		return;
+	}
+	var promise = models.user.findOne({ handle: user_id }).exec()
+		.then(function (user) {
+			if (!user) {
+				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
+			}
+
+			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+			}
+
+			if (updaterSessionToken.user.permissions <= user.permissions) {
+				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+			}
+
+			//We found the user to update
+			user.email = userDetailsToUpdate.email || user.email;
+			user.handle = userDetailsToUpdate.handle || user.handle;
+			//0 || 1 is some dum shit in JS, this means I can't use this short hand logical OR for this
+			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
+				user.permissions = userDetailsToUpdate.permissions;
+			}
+			if (userDetailsToUpdate.password) {
+				user.password = utils.createHash(userDetailsToUpdate.password);
+			}
+			console.log(user);
+			return user.save();
+		})
+		.then(function (user) {
+			if (user) {
+				res.send(templates.response(codes.success, "success", user));
+			} else {
+				throw new templates.error(codes.fail, "Failed to save user", "DB error");
+			}
+		})
+		.catch(function (err) {
+			res.status('400').send(templates.response(err.error_code || codes.fail, err.message || 'Fail', err.error || 'Error updating!'));
+		});
 });
 
 module.exports = router;

@@ -5,7 +5,7 @@ var templates = require('../modules/templates');
 var codes = templates.codes;
 var utils = require('../modules/utils');
 
-let MIN_WORD_PERMISSION = 2;
+let MIN_WORD_PERMISSION = 3;
 let PUNISHED_USER = 1;
 
 /**
