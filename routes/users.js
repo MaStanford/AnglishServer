@@ -89,22 +89,15 @@ router.route('/register').post(function (req, res) {
 router.route('/user')
 	.get(function (req, res) {
 		var user_email = req.query.email;
-		models.user.findOne({ email: utils.caseInsensitive(user_email) }, function (error, userFound) {
+		models.user.findOne({ email: utils.caseInsensitive(user_email)}, '_id handle email permissions', function (error, userFound) {
 			if (error) {
 				//Send error
 				res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
 			} else {
 				if (userFound) {
-					//Make new object without password object
-					var user = {
-						_id: userFound._id,
-						handle: userFound.handle,
-						email: userFound.email,
-						permissions: userFound.permissions
-					};
 					//Send Success.
-					console.log(templates.response(codes.success, "success", user));
-					res.send(templates.response(codes.success, "success", user));
+					console.log(templates.response(codes.success, "success", userFound));
+					res.send(templates.response(codes.success, "success", userFound));
 				} else {
 					//Send error
 					console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
@@ -124,7 +117,7 @@ router.route('/user')
 			return;
 		}
 		//We need to find a session token so we can get a user ID/
-		models.user.findOne({ email: userEmail }).exec()
+		models.user.findOne({ email: userEmail }, '_id handle email permissions').exec()
 			.then(function (user) {
 				if (!user) {
 					throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
@@ -152,12 +145,6 @@ router.route('/user')
 				return user.save();
 			})
 			.then(function (savedUser) {
-				var user = {
-					_id: savedUser._id,
-					handle: savedUser.handle,
-					email: savedUser.email,
-					permissions: savedUser.permissions
-				};
 				res.send(templates.response(codes.success, "success", user));
 			})
 			.catch(function (err) {
@@ -262,22 +249,15 @@ router.post('/user/handle/:user_id', function (req, res) {
 
 router.get('/user/:user_id', function (req, res) {
 	var user_id = req.params.user_id;
-	models.user.findOne({ _id: user_id }, function (error, userFound) {
+	models.user.findOne({ _id: user_id }, '_id handle email permissions', function (error, userFound) {
 		if (error) {
 			//Send error
 			res.status('400').send(templates.response(codes.fail, "Error retrieving user", error));
 		} else {
 			if (userFound) {
-				//Make new object without password object
-				var user = {
-					_id: userFound._id,
-					handle: userFound.handle,
-					email: userFound.email,
-					permissions: userFound.permissions
-				};
 				//Send Success.
-				console.log(templates.response(codes.success, "success", user));
-				res.send(templates.response(codes.success, "success", user));
+				console.log(templates.response(codes.success, "success", userFound));
+				res.send(templates.response(codes.success, "success", userFound));
 			} else {
 				//Send error
 				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));

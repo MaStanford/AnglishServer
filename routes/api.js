@@ -238,7 +238,7 @@ router.getCommentById = function (req, res) {
   });
 };
 
-//Get comment by comment_id
+//Delete comment by comment_id
 router.deleteCommentById = function (req, res) {
   var comment_id = req.params.comment_id;
   var session = req.session;
