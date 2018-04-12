@@ -152,8 +152,6 @@ router.get('/user/handle/:handle', function (req, res) {
 
 router.post('/user/email', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
-	console.log('Body:');
-	console.log(userDetailsToUpdate);
 	var userEmail = req.query.email;
 	var updaterSessionToken = req.session;
 	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
@@ -161,7 +159,7 @@ router.post('/user/email', function (req, res) {
 		return;
 	}
 	//We need to find a session token so we can get a user ID/
-	models.user.findOne({ email: userEmail }, '_id handle email permissions').exec()
+	models.user.findOne({ email: utils.caseInsensitive(userEmail) }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");

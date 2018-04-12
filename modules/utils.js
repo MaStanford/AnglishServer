@@ -34,6 +34,10 @@ module.exports.isExpiredToken = function(token){
     }
 };
 
+module.exports.toLowerCase = function(input){
+    return input.toLowerCase();
+}
+
 module.exports.caseInsensitive = function(search){
     return new RegExp(search, 'i')
 }
