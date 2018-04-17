@@ -15,5 +15,6 @@ module.exports.codes = {
 	no_user_found: -3,
 	duplicate_username: -4,
 	invalid_permissions: -5,
-	bad_session_token: -6
+	bad_session_token: -6,
+	document_not_found: -7,
 }

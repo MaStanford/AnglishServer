@@ -5,9 +5,6 @@ var templates = require('../modules/templates');
 var codes = templates.codes;
 var utils = require('../modules/utils');
 
-let MIN_WORD_PERMISSION = 3;
-let PUNISHED_USER = 1;
-
 /**
  * Post to add word. 
  * Query param token is session token from /users/login
@@ -19,7 +16,7 @@ let PUNISHED_USER = 1;
 router.route('/words')
   .post(function (req, res) {
     var session = req.session;
-    if (!session || session.user.permissions < MIN_WORD_PERMISSION) {
+    if (!session || session.user.permissions < utils.permissions.poweruser) {
       res.status('400').send(templates.response(codes.fail, "Invalid session or permissions", "Session was either not in the request header or the user does not have permission to add words", req.body));
       return;
     }
@@ -47,7 +44,7 @@ router.post('/words/:word_id', function (req, res) {
   var word_id = req.params.word_id;
   var updateWord = new models.word(req.body);
 
-  if (!session || session.user.permissions < MIN_WORD_PERMISSION) {
+  if (!session || session.user.permissions < utils.permissions.poweruser) {
     res.status('400').send(templates.response(codes.invalid_permissions, 'No session found', 'An invalid session token or no session token was in header.', req.body));
   }
 
@@ -68,16 +65,12 @@ router.post('/words/:word_id', function (req, res) {
     });
 });
 
-/**
- * Post to add word. 
- * Query param token is session token from /users/login
- * 
- * Get to search for word. 
- * Query param word_id is mongo ID if you have id from other object ref
- * Query param populate_comments is boolean if you want a populated list of comments, otherwise a list of comment_ids
- */
 router.get('/words/:word_id', function (req, res) {
   router.getWordbyId(req, res);
+});
+
+router.delete('/words/:word_id', function (req, res) {
+  router.deleteWordByID(req, res);
 });
 
 //Function that looks up words by ID
@@ -102,7 +95,6 @@ router.getWordbyId = function (req, res) {
     }
   })
     .catch(function (err) {
-      console.log('Error: ' + err.message);
       res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
     });
 }
@@ -115,8 +107,6 @@ router.getWordbyWord = function (req, res) {
   var populateComments = req.query.populate_comments;
   var promise = {};
 
-  console.log(req.query);
-  console.log('Query: ' + searchWord + ' populate comments: ' + populateComments);
   //Check to see if we should populate comments.  This is useful
   if (populateComments && populateComments == 1) {
     promise = models.word.find({ word: utils.caseInsensitive(searchWord) }).populate('comments').exec();
@@ -131,8 +121,33 @@ router.getWordbyWord = function (req, res) {
     }
   })
     .catch(function (err) {
-      console.log('Error: ' + err.message);
       res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
+    });
+}
+
+router.deleteWordByID = function (req, res) {
+  var word_id = req.params.word_id;
+  var session = req.session;
+  if (!session) {
+    res.status('400').send(templates.response(codes.fail, 'Invalid session', {}, req.body));
+  }
+  models.word.findOne({ _id: word_id }).exec()
+    .then((word) => {
+      if (word) {
+        if ((word.createdBy && word.createdBy.equals(session.user._id)) || session.user.permissions >= utils.permissions.admin) {
+          return word.remove();
+        } else {
+          throw templates.error(codes.invalid_permissions, 'Invalid permissions to delete this word', word);
+        }
+      } else {
+        throw templates.error(codes.document_not_found, 'Word not found', word);
+      }
+    })
+    .then((word) => {
+      res.send(templates.response(codes.success, "success", word, req.body));
+    })
+    .catch((error) => {
+      res.status('400').send(templates.response(error.error_code, err.message, error.error, req.body));
     });
 }
 
@@ -146,7 +161,7 @@ router.route('/bulkWord')
     if (!token) {
       res.status('400').send(templates.response(codes.fail, "fail", 'Invalid token', req.body));
     }
-    if (token == process.env.BULK_TOKEN) {
+    if (token === process.env.BULK_TOKEN) {
       var word = new models.word(req.body);
       word.save(function (error, word) {
         if (error) {
@@ -171,11 +186,9 @@ router.route('/bulkWord')
 router.route('/comments')
   .post(function (req, res) {
     var session = req.session;
-
-    if (!session || session.user.permissions <= PUNISHED_USER) {
+    if (!session || session.user.permissions < utils.permissions.basicuser) {
       res.status('400').send(templates.response(codes.fail, 'Invalid permissions', {}, req.body));
     }
-
     var newComment = new models.comment(req.body);
     var promise = newComment.save()
       .then(function (comment) {
@@ -201,7 +214,6 @@ router.route('/comments')
         }
       })
       .catch(function (err) {
-        console.log('Error: ' + err.message);
         res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
       });
   });
@@ -223,7 +235,7 @@ router.delete('/comments/comment/:comment_id', function (req, res) {
 });
 
 router.post('/comments/comment/:comment_id', function (req, res) {
-  res.status('400').send(templates.response(codes.fail, 'Feature not implemented yet', {}, req.body));
+  router.updateCommentById(req, res);
 });
 
 //Get comment by comment_id
@@ -246,33 +258,31 @@ router.deleteCommentById = function (req, res) {
     res.status('400').send(templates.response(codes.fail, 'Invalid session token', req.body));
     return;
   }
-
-  models.comment.findOne({ _id: comment_id }).populate('user').exec()
+  models.comment.findOne({ _id: comment_id }).populate('user', '_id handle email permissions').exec()
     .then(function (comment) {
       if (comment) {
-        if (comment.user._id == session.user._id || session.user.permissions >= 4) {
+        if (comment.user._id.equals(session.user._id) || session.user.permissions >= utils.permissions.mod) {
           return models.comment.findOneAndRemove({ _id: comment_id }).populate('word').exec();
         } else {
-          throw new templates.error(codes.invalid_permissions, 'Invalid permissions', comment);
+          throw templates.error(codes.invalid_permissions, 'Invalid permissions', comment);
         }
       } else {
-        throw new templates.error(codes.fail, 'Comment not found', comment);
+        throw templates.error(codes.fail, 'Comment not found', comment);
       }
     })
     .then(function (comment) {
       if (comment) {
         return models.word.findOne({ _id: comment.word }).populate('comments').exec();
       } else {
-        throw new templates.error(codes.fail, 'Comment not found', comment);
+        throw templates.error(codes.fail, 'Comment not found', comment);
       }
     })
     .then(function (word) {
       if (word) {
-        console.log(word);
         word.comments.pull(comment_id);
         return word.save();
       } else {
-        throw new templates.error(codes.fail, 'Comment not found', comment);
+        throw templates.error(codes.fail, 'Comment not found', comment);
       }
     })
     .then(function (word) {
@@ -281,6 +291,37 @@ router.deleteCommentById = function (req, res) {
       res.status('400').send(templates.response(err.error_code, err.message, err.error));
     });
 };
+
+router.updateCommentById = function (req, res) {
+  var session = req.session;
+  if (!session) {
+    res.status('400').send(templates.response(codes.fail, 'Invalid session token', req.body));
+    return;
+  }
+
+  var comment_id = req.params.comment_id;
+  var newComment = new models.comment(req.body);
+  var session = req.session;
+  models.comment.findOne({ _id: comment_id }).populate('user', '_id handle email permissions').exec()
+    .then((comment) => {
+      if (comment) {
+        if (comment.user._id.equals(session.user._id)) {
+          comment.comment = newComment.comment;
+          return comment.save();
+        } else {
+          throw templates.error(codes.invalid_permissions, 'Only comment creator can edit comments.', comment);
+        }
+      } else {
+        throw templates.error(codes.document_not_found, 'Comment not found', comment);
+      }
+    })
+    .then((comment) => {
+      res.send(templates.response(codes.success, "success", comment));
+    })
+    .catch((err) => {
+      res.status('400').send(templates.response(err.error_code, err.message, err.error, req.body));
+    });
+}
 
 //Get comments by a user_id
 router.getCommentsbyUser = function (req, res) {
@@ -302,7 +343,7 @@ router.getCommentsbyUser = function (req, res) {
 //Get comments by a word_id
 router.getCommentsbyWord = function (req, res) {
   var word_id = req.params.word_id;
-  var promise = models.comment.find({ word: word_id }).populate('user').exec();
+  var promise = models.comment.find({ word: word_id }).populate('user', '_id handle email permissions').exec();
   promise.then(function (comments) {
     if (comments) {
       res.send(templates.response(codes.success, "success", comments, req.body));

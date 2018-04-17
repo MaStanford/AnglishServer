@@ -41,3 +41,13 @@ module.exports.toLowerCase = function(input){
 module.exports.caseInsensitive = function(search){
     return new RegExp(search, 'i')
 }
+
+module.exports.permissions = {
+    //higher permissions get all lower priveledges.
+    owner:99, //Can upgrade users from 1-2-3-4-5-4-3-2-1.
+    admin:5, //Can upgrade users from 1-2-3-4-3-2-1 and delete words
+    mod:4, // Can upgrade users from 1-2-3-2-1 and delete comments
+    poweruser:3, //Can make words
+    basicuser:2, //Can comment
+    punisheduser:1 //Cant do anything
+}

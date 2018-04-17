@@ -43,6 +43,7 @@ module.exports = function (){
 			unattested: String,
 			type: String,
 			comments: [{type: mongoose.Schema.Types.ObjectId, ref: 'comments'}],
+			createdBy: {type: mongoose.Schema.Types.ObjectId, ref: 'users'},
 			createdAt:{ type: Date, default: Date.now },
 			updatedAt:{ type: Date, default: Date.now }
 		});

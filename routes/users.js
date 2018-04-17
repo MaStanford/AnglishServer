@@ -5,9 +5,6 @@ var utils = require('../modules/utils');
 var templates = require('../modules/templates');
 var codes = templates.codes;
 
-let BASIC_USER = 2;
-let MIN_MOD = 4;
-
 router.route('/login')
 	.post(function (req, res) {
 		var loggingInUser = {};
@@ -16,7 +13,7 @@ router.route('/login')
 			.then(function (userFound) {
 				if (userFound) {
 					var hash = utils.createHash(req.body.password);
-					if (hash == userFound.password) {
+					if (hash === userFound.password) {
 						loggingInUser = userFound;
 						return models.session.findOne({ user: userFound._id }).exec();
 					} else {
@@ -35,13 +32,11 @@ router.route('/login')
 				return session.save();
 			}).then(function (sessionToken) {
 				if (sessionToken) {
-					console.log(templates.response(codes.success, "success", sessionToken));
 					res.send(templates.response(codes.success, "success", sessionToken));
 				} else {
 					throw new templates.error(codes.fail, "Error creating token", "Unknown DB error");
 				}
 			}).catch(function (err) {
-				console.log(templates.response(err.error_code || codes.bad_password, err.message || 'Fail', err.error || 'Error logging in!'));
 				res.send(templates.response(err.error_code || codes.bad_password, err.message || 'Fail', err.error || 'Error logging in!'));
 			});
 	});
@@ -61,7 +56,7 @@ router.route('/logout').post(function (req, res) {
 
 router.route('/register').post(function (req, res) {
 	var user = models.user(req.body);
-	user.permissions = BASIC_USER;
+	user.permissions = utils.permissions.basicuser;
 	user.password = utils.createHash(user.password);
 	user.save(function (error, user) {
 		if (error) {
@@ -72,11 +67,9 @@ router.route('/register').post(function (req, res) {
 				message = "Email or Handle already registered";
 				code = codes.duplicate_username;
 			}
-			console.log(templates.response(code, message, {}));
 			res.status('400').send(templates.response(code, message, {}));
 		} else {
 			//send success.
-			console.log(templates.response(codes.success, "success", user));
 			res.send(templates.response(codes.success, "success", user));
 		}
 	});
@@ -99,11 +92,9 @@ router.get('/user/email', function (req, res) {
 		} else {
 			if (userFound) {
 				//Send Success.
-				console.log(templates.response(codes.success, "success", userFound));
 				res.send(templates.response(codes.success, "success", userFound));
 			} else {
 				//Send error
-				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
 				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 			}
 		}
@@ -119,11 +110,9 @@ router.get('/user/:user_id', function (req, res) {
 		} else {
 			if (userFound) {
 				//Send Success.
-				console.log(templates.response(codes.success, "success", userFound));
 				res.send(templates.response(codes.success, "success", userFound));
 			} else {
 				//Send error
-				console.log(templates.response(codes.no_user_found, "Error retrieving user", {}));
 				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 			}
 		}
@@ -139,11 +128,9 @@ router.get('/user/handle/:handle', function (req, res) {
 		} else {
 			if (userFound) {
 				//Send Success.
-				console.log(templates.response(codes.success, "success", userFound));
 				res.send(templates.response(codes.success, "success", userFound));
 			} else {
 				//Send error
-				console.log(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 				res.status('400').send(templates.response(codes.no_user_found, "Error retrieving user", 'User not found'));
 			}
 		}
@@ -154,7 +141,7 @@ router.post('/user/email', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
 	var userEmail = req.query.email;
 	var updaterSessionToken = req.session;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
@@ -165,12 +152,14 @@ router.post('/user/email', function (req, res) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 			}
 
-			if (updaterSessionToken.user.permissions <= user.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
-			}
+			if (!user._id.equals(updaterSessionToken.user._id)) {
+				if (updaterSessionToken.user.permissions <= user.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+				}
 
-			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+				if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+				}
 			}
 
 			//We found the user to update
@@ -184,13 +173,13 @@ router.post('/user/email', function (req, res) {
 			if (userDetailsToUpdate.password) {
 				user.password = utils.createHash(user.password);
 			}
+
 			return user.save();
 		})
 		.then(function (savedUser) {
 			res.send(templates.response(codes.success, "success", user));
 		})
 		.catch(function (err) {
-			console.log(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
 			res.send(templates.response(err.error_code || codes.invalid_permissions, err.message || 'Fail', err.error || 'Error updating user!'));
 		});
 });
@@ -199,22 +188,24 @@ router.post('/user/:user_id', function (req, res) {
 	var updaterSessionToken = req.session;
 	var userDetailsToUpdate = models.user(req.body);
 	var user_id = req.params.user_id;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	var promise = models.user.findOne({ _id: user_id }).exec()
+	var promise = models.user.findOne({ _id: user_id }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 			}
 
-			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
-			}
+			if (!user._id.equals(updaterSessionToken.user._id)) {
+				if (updaterSessionToken.user.permissions <= user.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+				}
 
-			if (updaterSessionToken.user.permissions <= user.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+				if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+				}
 			}
 
 			//We found the user to update
@@ -224,9 +215,11 @@ router.post('/user/:user_id', function (req, res) {
 			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
 				user.permissions = userDetailsToUpdate.permissions;
 			}
+			//Gotta make a hash in this case.
 			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(userDetailsToUpdate.password);
+				user.password = utils.createHash(user.password);
 			}
+
 			return user.save();
 		})
 		.then(function (user) {
@@ -246,22 +239,24 @@ router.post('/user/handle/:user_id', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
 	console.log(userDetailsToUpdate);
 	var user_id = req.params.user_id;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < MIN_MOD) {
+	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	var promise = models.user.findOne({ handle: user_id }).exec()
+	var promise = models.user.findOne({ handle: user_id }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 			}
 
-			if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
-			}
+			if (!user._id.equals(updaterSessionToken.user._id)) {
+				if (updaterSessionToken.user.permissions <= user.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+				}
 
-			if (updaterSessionToken.user.permissions <= user.permissions) {
-				throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
+				if (updaterSessionToken.user.permissions <= userDetailsToUpdate.permissions) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
+				}
 			}
 
 			//We found the user to update
@@ -271,10 +266,11 @@ router.post('/user/handle/:user_id', function (req, res) {
 			if (userDetailsToUpdate.permissions || userDetailsToUpdate.permissions === 0) {
 				user.permissions = userDetailsToUpdate.permissions;
 			}
+			//Gotta make a hash in this case.
 			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(userDetailsToUpdate.password);
+				user.password = utils.createHash(user.password);
 			}
-			console.log(user);
+
 			return user.save();
 		})
 		.then(function (user) {
