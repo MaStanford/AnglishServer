@@ -20,7 +20,9 @@ router.route('/words')
       res.status('400').send(templates.response(codes.fail, "Invalid session or permissions", "Session was either not in the request header or the user does not have permission to add words", req.body));
       return;
     }
-    var promise = new models.word(req.body).save()
+    var word = new models.word(req.body);
+    word.createdBy = session.user._id;
+    word.save()
       .then(function (word) {
         res.send(templates.response(codes.success, "success", word, req.body));
       })
@@ -67,6 +69,10 @@ router.post('/words/:word_id', function (req, res) {
 
 router.get('/words/:word_id', function (req, res) {
   router.getWordbyId(req, res);
+});
+
+router.get('/words/user/:user_id', function (req, res) {
+  router.getWordsByUserId(req, res);
 });
 
 router.delete('/words/:word_id', function (req, res) {
@@ -123,6 +129,26 @@ router.getWordbyWord = function (req, res) {
     .catch(function (err) {
       res.status('400').send(templates.response(codes.fail, err.message, err, req.body));
     });
+}
+
+router.getWordsByUserId = function (req, res) {
+  var user_id = req.params.user_id;
+  var populateComments = req.query.populate_comments;
+  var promise = {};
+
+  //Check to see if we should populate comments.  This is useful
+  if (populateComments && populateComments == 1) {
+    promise = models.word.find({ createdBy: user_id }).populate('comments').exec();
+  } else {
+    promise = models.word.find({ createdBy: user_id }).exec();
+  }
+  promise.then(function (words) {
+    if (utils.isEmpty(words)) {
+      res.status('400').send(templates.response(codes.fail, "fail", error, req.body));
+    } else {
+      res.send(templates.response(codes.success, "success", words, req.body));
+    }
+  })
 }
 
 router.deleteWordByID = function (req, res) {

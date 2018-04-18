@@ -162,6 +162,9 @@ router.post('/user/email', function (req, res) {
 				}
 			}
 
+			//Update isNew flag otherwise it will think we are duplicating handle and email
+			user.isNew = false;
+			
 			//We found the user to update
 			user.email = userDetailsToUpdate.email || user.email;
 			user.handle = userDetailsToUpdate.handle || user.handle;
@@ -207,6 +210,9 @@ router.post('/user/:user_id', function (req, res) {
 					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
 				}
 			}
+
+			//Update isNew flag otherwise it will think we are duplicating handle and email
+			user.isNew = false;
 
 			//We found the user to update
 			user.email = userDetailsToUpdate.email || user.email;
@@ -258,6 +264,9 @@ router.post('/user/handle/:user_id', function (req, res) {
 					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the resultant update");
 				}
 			}
+
+			//Update isNew flag otherwise it will think we are duplicating handle and email
+			user.isNew = false;
 
 			//We found the user to update
 			user.email = userDetailsToUpdate.email || user.email;
