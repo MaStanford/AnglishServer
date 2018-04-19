@@ -161,7 +161,7 @@ router.deleteWordByID = function (req, res) {
     .then((word) => {
       if (word) {
         if ((word.createdBy && word.createdBy.equals(session.user._id)) || session.user.permissions >= utils.permissions.admin) {
-          return word.remove();
+          return models.findOneAndRemove({ _id: word._id }).exec();
         } else {
           throw templates.error(codes.invalid_permissions, 'Invalid permissions to delete this word', word);
         }
@@ -369,7 +369,7 @@ router.getCommentsbyUser = function (req, res) {
 //Get comments by a word_id
 router.getCommentsbyWord = function (req, res) {
   var word_id = req.params.word_id;
-  var promise = models.comment.find({ word: word_id }).populate('user', '_id handle email permissions').exec();
+  var promise = models.comment.find({ word: word_id }).exec();
   promise.then(function (comments) {
     if (comments) {
       res.send(templates.response(codes.success, "success", comments, req.body));
