@@ -352,7 +352,7 @@ router.updateCommentById = function (req, res) {
 //Get comments by a user_id
 router.getCommentsbyUser = function (req, res) {
   var user_id = req.params.user_id;
-  var promise = models.comment.find({ user: user_id }).exec();
+  var promise = models.comment.find({ user: user_id }).populate('user', '_id handle email permissions').exec();
   promise.then(function (comments) {
     if (comments) {
       res.send(templates.response(codes.success, "success", comments, req.body));
@@ -369,7 +369,7 @@ router.getCommentsbyUser = function (req, res) {
 //Get comments by a word_id
 router.getCommentsbyWord = function (req, res) {
   var word_id = req.params.word_id;
-  var promise = models.comment.find({ word: word_id }).exec();
+  var promise = models.comment.find({ word: word_id }).populate('user', '_id handle email permissions').exec();
   promise.then(function (comments) {
     if (comments) {
       res.send(templates.response(codes.success, "success", comments, req.body));
