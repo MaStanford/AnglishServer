@@ -161,7 +161,7 @@ router.deleteWordByID = function (req, res) {
     .then((word) => {
       if (word) {
         if ((word.createdBy && word.createdBy.equals(session.user._id)) || session.user.permissions >= utils.permissions.admin) {
-          return models.findOneAndRemove({ _id: word_id }).exec();
+          return models.word.findOneAndRemove({ _id: word_id }).exec();
         } else {
           throw templates.error(codes.invalid_permissions, 'Invalid permissions to delete this word', word);
         }
