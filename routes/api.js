@@ -177,7 +177,7 @@ router.deleteWordByID = function (req, res) {
       }
     })
     .catch((error) => {
-      res.status('400').send(templates.response(error.error_code, err.message, error.error, req.body));
+      res.status('400').send(templates.response(error.error_code, error.message, error.error, req.body));
     });
 }
 
