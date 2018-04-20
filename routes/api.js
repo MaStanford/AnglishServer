@@ -161,7 +161,7 @@ router.deleteWordByID = function (req, res) {
     .then((word) => {
       if (word) {
         if ((word.createdBy && word.createdBy.equals(session.user._id)) || session.user.permissions >= utils.permissions.admin) {
-          return models.findOneAndRemove({ _id: word._id }).exec();
+          return models.findOneAndRemove({ _id: word_id }).exec();
         } else {
           throw templates.error(codes.invalid_permissions, 'Invalid permissions to delete this word', word);
         }
@@ -170,7 +170,11 @@ router.deleteWordByID = function (req, res) {
       }
     })
     .then((word) => {
-      res.send(templates.response(codes.success, "success", word, req.body));
+      if(word){
+        res.send(templates.response(codes.success, "success", word, req.body));
+      }else{
+        throw templates.error(codes.fail, 'Failed to delete word for some reason that is not known.', word);
+      }
     })
     .catch((error) => {
       res.status('400').send(templates.response(error.error_code, err.message, error.error, req.body));
