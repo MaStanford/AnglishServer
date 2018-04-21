@@ -141,7 +141,7 @@ router.post('/user/email', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
 	var userEmail = req.query.email;
 	var updaterSessionToken = req.session;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
+	if (!updaterSessionToken) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
@@ -153,6 +153,11 @@ router.post('/user/email', function (req, res) {
 			}
 
 			if (!user._id.equals(updaterSessionToken.user._id)) {
+
+				if (updaterSessionToken.user.permissions < utils.permissions.mod) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have at least mod permissions to update users");
+				}
+
 				if (updaterSessionToken.user.permissions <= user.permissions) {
 					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
 				}
@@ -164,7 +169,7 @@ router.post('/user/email', function (req, res) {
 
 			//Update isNew flag otherwise it will think we are duplicating handle and email
 			user.isNew = false;
-			
+
 			//We found the user to update
 			user.email = userDetailsToUpdate.email || user.email;
 			user.handle = userDetailsToUpdate.handle || user.handle;
@@ -191,17 +196,22 @@ router.post('/user/:user_id', function (req, res) {
 	var updaterSessionToken = req.session;
 	var userDetailsToUpdate = models.user(req.body);
 	var user_id = req.params.user_id;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
+	if (!updaterSessionToken) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	var promise = models.user.findOne({ _id: user_id }, '_id handle email permissions').exec()
+	models.user.findOne({ email: utils.caseInsensitive(userEmail) }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 			}
 
 			if (!user._id.equals(updaterSessionToken.user._id)) {
+
+				if (updaterSessionToken.user.permissions < utils.permissions.mod) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have at least mod permissions to update users");
+				}
+
 				if (updaterSessionToken.user.permissions <= user.permissions) {
 					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
 				}
@@ -245,17 +255,22 @@ router.post('/user/handle/:user_id', function (req, res) {
 	var userDetailsToUpdate = models.user(req.body);
 	console.log(userDetailsToUpdate);
 	var user_id = req.params.user_id;
-	if (!updaterSessionToken || updaterSessionToken.user.permissions < utils.permissions.mod) {
+	if (!updaterSessionToken) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	var promise = models.user.findOne({ handle: user_id }, '_id handle email permissions').exec()
+	models.user.findOne({ email: utils.caseInsensitive(userEmail) }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
 			}
 
 			if (!user._id.equals(updaterSessionToken.user._id)) {
+
+				if (updaterSessionToken.user.permissions < utils.permissions.mod) {
+					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have at least mod permissions to update users");
+				}
+
 				if (updaterSessionToken.user.permissions <= user.permissions) {
 					throw new templates.error(codes.invalid_permissions, "Invalid permissons", "You must have greater permissions than the user to be updated");
 				}
