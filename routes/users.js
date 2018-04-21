@@ -184,7 +184,7 @@ router.post('/user/email', function (req, res) {
 
 			return user.save();
 		})
-		.then(function (savedUser) {
+		.then(function (user) {
 			res.send(templates.response(codes.success, "success", user));
 		})
 		.catch(function (err) {
@@ -200,7 +200,7 @@ router.post('/user/:user_id', function (req, res) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	models.user.findOne({ email: utils.caseInsensitive(userEmail) }, '_id handle email permissions').exec()
+	models.user.findOne({ _id: user_id }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
@@ -253,13 +253,12 @@ router.post('/user/:user_id', function (req, res) {
 router.post('/user/handle/:user_id', function (req, res) {
 	var updaterSessionToken = req.session;
 	var userDetailsToUpdate = models.user(req.body);
-	console.log(userDetailsToUpdate);
 	var user_id = req.params.user_id;
 	if (!updaterSessionToken) {
 		res.send(templates.response(codes.bad_session_token, 'Invalid session or permissions', 'Invalid session or permissions'));
 		return;
 	}
-	models.user.findOne({ email: utils.caseInsensitive(userEmail) }, '_id handle email permissions').exec()
+	models.user.findOne({ handle: utils.caseInsensitive(user_id) }, '_id handle email permissions').exec()
 		.then(function (user) {
 			if (!user) {
 				throw new templates.error(codes.no_user_found, "Cannot update user, not found", "User not found, check user id");
