@@ -179,7 +179,7 @@ router.post('/user/email', function (req, res) {
 			}
 			//Gotta make a hash in this case.
 			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(user.password);
+				user.password = utils.createHash(userDetailsToUpdate.password);
 			}
 
 			return user.save();
@@ -233,7 +233,7 @@ router.post('/user/:user_id', function (req, res) {
 			}
 			//Gotta make a hash in this case.
 			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(user.password);
+				user.password = utils.createHash(userDetailsToUpdate.password);
 			}
 
 			return user.save();
@@ -291,7 +291,7 @@ router.post('/user/handle/:user_id', function (req, res) {
 			}
 			//Gotta make a hash in this case.
 			if (userDetailsToUpdate.password) {
-				user.password = utils.createHash(user.password);
+				user.password = utils.createHash(userDetailsToUpdate.password);
 			}
 
 			return user.save();
