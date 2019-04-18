@@ -1,11 +1,11 @@
 var context;
 
-module.exports = function (){
-	console.log('Loading models.js')
-	
+module.exports = function (){	
 	if(context){
 		return context;
 	}
+
+	console.log('Loading models.js')
 	
 	context = {};
 	var mongoose = require('mongoose');
@@ -14,7 +14,7 @@ module.exports = function (){
 	//Mongoose
 	//Set up MONGOLAB_URI 
 	//https://devcenter.heroku.com/articles/mongolab#getting-your-connection-uri	
-	mongoose.connect(process.env.MONGODB_URI || '127.0.0.1:27017/anglish');
+	mongoose.connect(process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/anglish', {useNewUrlParser: true});
 	console.log('db connecting');
 
 	var db = mongoose.connection;
