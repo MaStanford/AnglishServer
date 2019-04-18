@@ -1,6 +1,5 @@
 var models = require('../modules/models')();
 var templates = require('../modules/templates');
-var utils = require('../modules/utils');
 
 module.exports.getSessionToken = function(req, res, next){
 	var sessionToken = req.header('sessionToken');
